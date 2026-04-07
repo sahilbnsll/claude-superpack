@@ -1,0 +1,4 @@
+.DS_Store
+.safe-summon/
+claude-execution-log.json
+claude-execution-log.json.lock

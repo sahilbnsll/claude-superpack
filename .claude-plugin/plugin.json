@@ -1,0 +1,39 @@
+{
+  "name": "claude-superpack",
+  "version": "1.0.0",
+  "description": "Deterministic parallel task orchestration for Claude Code with decomposition, conflict checks, and isolated worker execution.",
+  "author": {
+    "name": "Sahil Bansal",
+    "url": "https://github.com/sahilbnsll"
+  },
+  "homepage": "https://github.com/sahilbnsll/claude-superpack",
+  "repository": "https://github.com/sahilbnsll/claude-superpack",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "parallel-execution",
+    "agents",
+    "orchestration",
+    "worktrees"
+  ],
+  "interface": {
+    "displayName": "Claude Superpack",
+    "shortDescription": "Parallel planning and isolated worker execution for Claude Code.",
+    "longDescription": "Claude Superpack adds a planner-worker flow to Claude Code through native skills and a safe execution runner that prefers git worktrees and falls back to filtered filesystem copies.",
+    "developerName": "Sahil Bansal",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills",
+      "Automation",
+      "Parallel planning"
+    ],
+    "websiteURL": "https://github.com/sahilbnsll/claude-superpack",
+    "defaultPrompt": [
+      "Fix a bug, add tests, and update docs safely.",
+      "Split this request into low-conflict workstreams.",
+      "Run parallel workers with isolated worktrees."
+    ],
+    "brandColor": "#0F766E"
+  }
+}
