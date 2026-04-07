@@ -1,0 +1,575 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MODE="auto"
+TIMEOUT_SECONDS=180
+TASK_NAME=""
+SOURCE_DIR="$PWD"
+LOG_FILE=""
+KEEP_WORKSPACE=0
+COMMAND=()
+
+TEMP_ROOT=""
+WORKTREE_DIR=""
+WORKSPACE=""
+ISOLATION_MODE=""
+PATCH_FILE=""
+GIT_ROOT=""
+RUN_ID=""
+TIMEOUT_BIN=""
+START_SECONDS=0
+END_SECONDS=0
+DURATION_SECONDS=0
+TIMED_OUT=0
+COMMAND_EXIT_CODE=0
+FINAL_EXIT_CODE=0
+SECRET_SCAN="skipped"
+TASK_SLUG="worker-run"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  safe-summon [options] -- command [args...]
+
+Options:
+  --task <name>         Friendly task label for logs and patch artifacts
+  --timeout <seconds>   Worker timeout in seconds (default: 180)
+  --mode <auto|git|copy>
+                        Isolation mode (default: auto)
+  --source <path>       Source directory to isolate (default: current directory)
+  --log-file <path>     JSON log file (default: <source>/claude-execution-log.json)
+  --keep-workspace      Keep the isolated workspace after execution
+  -h, --help            Show this help text
+EOF
+}
+
+fail() {
+  printf 'safe-summon: %s\n' "$1" >&2
+  exit 64
+}
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    printf 'safe-summon: required command not found: %s\n' "$1" >&2
+    exit 69
+  fi
+}
+
+abs_dir() {
+  local target="$1"
+  (cd "$target" >/dev/null 2>&1 && pwd -P)
+}
+
+slugify() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-'
+}
+
+choose_timeout_bin() {
+  if command -v gtimeout >/dev/null 2>&1; then
+    printf 'gtimeout'
+    return
+  fi
+
+  if command -v timeout >/dev/null 2>&1; then
+    printf 'timeout'
+    return
+  fi
+
+  printf ''
+}
+
+git_has_local_changes() {
+  local git_root="$1"
+
+GIT_ROOT_FOR_STATUS="$git_root" python3 - <<'PY'
+import os
+from pathlib import PurePosixPath
+import subprocess
+import sys
+
+git_root = os.environ["GIT_ROOT_FOR_STATUS"]
+result = subprocess.run(
+    ["git", "-C", git_root, "status", "--porcelain", "--untracked-files=normal"],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True,
+    check=True,
+)
+
+ignored_names = {
+    ".safe-summon",
+    "claude-execution-log.json",
+    "claude-execution-log.json.lock",
+}
+
+for line in result.stdout.splitlines():
+    path = line[3:]
+    if " -> " in path:
+        path = path.split(" -> ", 1)[1]
+    path = path.strip()
+    if not path:
+        continue
+    parts = PurePosixPath(path).parts
+    if any(part in ignored_names for part in parts):
+        continue
+    sys.exit(0)
+
+sys.exit(1)
+PY
+}
+
+cleanup() {
+  local prior_exit=$?
+
+  if [[ -n "$WORKTREE_DIR" && -d "$WORKTREE_DIR" && $KEEP_WORKSPACE -eq 0 ]]; then
+    if [[ -n "$GIT_ROOT" ]]; then
+      git -C "$GIT_ROOT" worktree remove --force "$WORKTREE_DIR" >/dev/null 2>&1 || rm -rf "$WORKTREE_DIR"
+    else
+      rm -rf "$WORKTREE_DIR"
+    fi
+  fi
+
+  if [[ -n "$TEMP_ROOT" && -d "$TEMP_ROOT" && $KEEP_WORKSPACE -eq 0 ]]; then
+    rm -rf "$TEMP_ROOT"
+  fi
+
+  exit "$prior_exit"
+}
+
+trap cleanup EXIT
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --task)
+      [[ $# -ge 2 ]] || fail "missing value for --task"
+      TASK_NAME="$2"
+      shift 2
+      ;;
+    --timeout)
+      [[ $# -ge 2 ]] || fail "missing value for --timeout"
+      TIMEOUT_SECONDS="$2"
+      shift 2
+      ;;
+    --mode)
+      [[ $# -ge 2 ]] || fail "missing value for --mode"
+      MODE="$2"
+      shift 2
+      ;;
+    --source)
+      [[ $# -ge 2 ]] || fail "missing value for --source"
+      SOURCE_DIR="$2"
+      shift 2
+      ;;
+    --log-file)
+      [[ $# -ge 2 ]] || fail "missing value for --log-file"
+      LOG_FILE="$2"
+      shift 2
+      ;;
+    --keep-workspace)
+      KEEP_WORKSPACE=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      COMMAND=("$@")
+      break
+      ;;
+    *)
+      COMMAND=("$@")
+      break
+      ;;
+  esac
+done
+
+[[ ${#COMMAND[@]} -gt 0 ]] || fail "no command provided"
+[[ -d "$SOURCE_DIR" ]] || fail "source directory does not exist: $SOURCE_DIR"
+[[ "$TIMEOUT_SECONDS" =~ ^[0-9]+$ ]] || fail "timeout must be an integer number of seconds"
+
+case "$MODE" in
+  auto|git|copy) ;;
+  *) fail "mode must be one of: auto, git, copy" ;;
+esac
+
+require_command python3
+TIMEOUT_BIN="$(choose_timeout_bin)"
+[[ -n "$TIMEOUT_BIN" ]] || fail "timeout backend required: install timeout or gtimeout"
+
+SOURCE_DIR="$(abs_dir "$SOURCE_DIR")"
+if [[ -z "$LOG_FILE" ]]; then
+  LOG_FILE="$SOURCE_DIR/claude-execution-log.json"
+elif [[ "$LOG_FILE" != /* ]]; then
+  LOG_FILE="$SOURCE_DIR/$LOG_FILE"
+fi
+
+TASK_SLUG="$(slugify "${TASK_NAME:-${COMMAND[0]}}")"
+TASK_SLUG="${TASK_SLUG#-}"
+TASK_SLUG="${TASK_SLUG%-}"
+[[ -n "$TASK_SLUG" ]] || TASK_SLUG="worker-run"
+
+RUN_ID="$(python3 - <<'PY'
+import uuid
+print(uuid.uuid4().hex[:12])
+PY
+)"
+TEMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/safe-summon.XXXXXX")"
+mkdir -p "$SOURCE_DIR/.safe-summon"
+PATCH_FILE="$SOURCE_DIR/.safe-summon/$(date -u +%Y%m%dT%H%M%SZ)-${TASK_SLUG}-${RUN_ID}.patch"
+
+copy_source_tree() {
+  local src="$1"
+  local dst="$2"
+  local excludes=(
+    --exclude=.git
+    --exclude=.safe-summon
+    --exclude=claude-execution-log.json
+    --exclude=claude-execution-log.json.lock
+    --exclude=node_modules
+    --exclude=.venv
+    --exclude=venv
+    --exclude=dist
+    --exclude=build
+    --exclude=.next
+    --exclude=.turbo
+    --exclude=.cache
+    --exclude=coverage
+  )
+
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a "${excludes[@]}" "$src"/ "$dst"/
+    return
+  fi
+
+  tar -C "$src" -cf - "${excludes[@]}" . | tar -C "$dst" -xf -
+}
+
+create_workspace() {
+  local git_root=""
+  local rel_path=""
+
+  if [[ "$MODE" != "copy" ]] && git_root="$(git -C "$SOURCE_DIR" rev-parse --show-toplevel 2>/dev/null || true)"; then
+    if [[ -n "$git_root" ]] && git -C "$git_root" rev-parse --verify HEAD >/dev/null 2>&1; then
+      if git_has_local_changes "$git_root"; then
+        if [[ "$MODE" == "git" ]]; then
+          fail "git mode requested, but repository has local changes; clean or stash changes, or use copy mode"
+        fi
+        printf 'safe-summon: dirty git tree detected, falling back to copy mode\n' >&2
+      else
+        GIT_ROOT="$git_root"
+        WORKTREE_DIR="$TEMP_ROOT/worktree"
+        git -C "$git_root" worktree add --detach "$WORKTREE_DIR" HEAD >/dev/null 2>&1
+        rel_path=""
+        if [[ "$SOURCE_DIR" != "$git_root" ]]; then
+          rel_path="${SOURCE_DIR#"$git_root"/}"
+        fi
+        WORKSPACE="$WORKTREE_DIR"
+        if [[ -n "$rel_path" ]]; then
+          WORKSPACE="$WORKTREE_DIR/$rel_path"
+        fi
+        ISOLATION_MODE="git-worktree"
+        return
+      fi
+    fi
+  fi
+
+  [[ "$MODE" != "git" ]] || fail "git mode requested, but source is not a usable git repository with a checked-in HEAD"
+
+  WORKSPACE="$TEMP_ROOT/copy"
+  mkdir -p "$WORKSPACE"
+  copy_source_tree "$SOURCE_DIR" "$WORKSPACE"
+  ISOLATION_MODE="filesystem-copy"
+}
+
+collect_patch_with_git_no_index() {
+  local diff_root="$TEMP_ROOT/diff-view"
+  local diff_src="$diff_root/src"
+  local diff_dst="$diff_root/dst"
+  local diff_exit=0
+
+  mkdir -p "$diff_src" "$diff_dst"
+  copy_source_tree "$SOURCE_DIR" "$diff_src"
+  copy_source_tree "$WORKSPACE" "$diff_dst"
+
+  set +e
+  (
+    cd "$diff_root"
+    git diff --no-index --binary --no-ext-diff -- src dst
+  ) > "$PATCH_FILE"
+  diff_exit=$?
+  set -e
+
+  if [[ $diff_exit -gt 1 ]]; then
+    return 1
+  fi
+
+  python3 - "$PATCH_FILE" <<'PY'
+from pathlib import Path
+import sys
+
+patch_path = Path(sys.argv[1])
+text = patch_path.read_text(encoding="utf-8", errors="surrogateescape")
+text = text.replace(" a/src/", " a/")
+text = text.replace(" b/dst/", " b/")
+text = text.replace("--- a/src/", "--- a/")
+text = text.replace("+++ b/dst/", "+++ b/")
+text = text.replace("Binary files src/", "Binary files a/")
+text = text.replace(" and dst/", " and b/")
+patch_path.write_text(text, encoding="utf-8", errors="surrogateescape")
+PY
+
+  return 0
+}
+
+collect_patch_with_python_fallback() {
+  python3 - "$SOURCE_DIR" "$WORKSPACE" "$PATCH_FILE" <<'PY'
+import difflib
+import os
+from pathlib import Path
+import sys
+
+source = Path(sys.argv[1])
+workspace = Path(sys.argv[2])
+patch_path = Path(sys.argv[3])
+ignored_names = {
+    ".git",
+    ".safe-summon",
+    "claude-execution-log.json",
+    "claude-execution-log.json.lock",
+    "node_modules",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+    ".next",
+    ".turbo",
+    ".cache",
+    "coverage",
+}
+
+
+def ignored(path: Path) -> bool:
+    return any(part in ignored_names for part in path.parts)
+
+
+def file_map(root: Path):
+    mapping = {}
+    for current_root, dirs, files in os.walk(root):
+        current = Path(current_root)
+        dirs[:] = [d for d in dirs if d not in ignored_names]
+        for name in files:
+            rel = (current / name).relative_to(root)
+            if ignored(rel):
+                continue
+            mapping[str(rel)] = current / name
+    return mapping
+
+
+def read_bytes(path: Path) -> bytes:
+    return path.read_bytes()
+
+
+def read_lines(path: Path) -> list[str]:
+    return path.read_text(encoding="utf-8", errors="surrogateescape").splitlines(keepends=True)
+
+
+def is_binary(blob: bytes) -> bool:
+    return b"\0" in blob
+
+
+source_files = file_map(source)
+workspace_files = file_map(workspace)
+all_paths = sorted(set(source_files) | set(workspace_files))
+chunks = []
+
+for rel in all_paths:
+    left = source_files.get(rel)
+    right = workspace_files.get(rel)
+    left_bytes = read_bytes(left) if left is not None else None
+    right_bytes = read_bytes(right) if right is not None else None
+
+    if left_bytes is not None and right_bytes is not None and left_bytes == right_bytes:
+        continue
+
+    if (left_bytes is not None and is_binary(left_bytes)) or (right_bytes is not None and is_binary(right_bytes)):
+        chunks.append(f"diff --git a/{rel} b/{rel}\n")
+        chunks.append(f"Binary files a/{rel} and b/{rel} differ\n")
+        continue
+
+    if left is None:
+        left_lines = []
+        right_lines = read_lines(right)
+        fromfile = f"a/{rel}"
+        tofile = f"b/{rel}"
+    elif right is None:
+        left_lines = read_lines(left)
+        right_lines = []
+        fromfile = f"a/{rel}"
+        tofile = f"b/{rel}"
+    else:
+        left_lines = read_lines(left)
+        right_lines = read_lines(right)
+        fromfile = f"a/{rel}"
+        tofile = f"b/{rel}"
+
+    diff = difflib.unified_diff(
+        left_lines,
+        right_lines,
+        fromfile=fromfile,
+        tofile=tofile,
+        n=3,
+    )
+    chunks.extend(diff)
+
+patch_path.parent.mkdir(parents=True, exist_ok=True)
+patch_path.write_text("".join(chunks), encoding="utf-8", errors="surrogateescape")
+PY
+}
+
+collect_patch() {
+  if [[ "$ISOLATION_MODE" == "git-worktree" ]]; then
+    git -C "$WORKTREE_DIR" diff --binary --no-ext-diff HEAD > "$PATCH_FILE" || true
+    return
+  fi
+
+  if command -v git >/dev/null 2>&1 && collect_patch_with_git_no_index; then
+    return
+  fi
+
+  collect_patch_with_python_fallback
+}
+
+scan_patch_for_secrets() {
+  if [[ ! -s "$PATCH_FILE" ]]; then
+    SECRET_SCAN="passed"
+    return 0
+  fi
+
+  local pattern
+  pattern='AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN (RSA |OPENSSH |DSA |EC )?PRIVATE KEY-----'
+
+  if grep -Eq "$pattern" "$PATCH_FILE"; then
+    SECRET_SCAN="failed"
+    printf 'safe-summon: potential secret-like material detected in %s\n' "$PATCH_FILE" >&2
+    return 1
+  fi
+
+  SECRET_SCAN="passed"
+  return 0
+}
+
+run_worker() {
+  START_SECONDS="$(date +%s)"
+
+  set +e
+  (
+    cd "$WORKSPACE"
+    "$TIMEOUT_BIN" "$TIMEOUT_SECONDS" "${COMMAND[@]}"
+  )
+  COMMAND_EXIT_CODE=$?
+  if [[ $COMMAND_EXIT_CODE -eq 124 ]]; then
+    TIMED_OUT=1
+  fi
+  set -e
+
+  END_SECONDS="$(date +%s)"
+  DURATION_SECONDS=$((END_SECONDS - START_SECONDS))
+}
+
+append_log_entry() {
+  local command_json
+  command_json="$(python3 - "${COMMAND[@]}" <<'PY'
+import json
+import sys
+print(json.dumps(sys.argv[1:]))
+PY
+)"
+
+  LOG_FILE="$LOG_FILE" \
+  PATCH_FILE="$PATCH_FILE" \
+  COMMAND_JSON="$command_json" \
+  TASK_NAME="$TASK_NAME" \
+  ISOLATION_MODE="$ISOLATION_MODE" \
+  SOURCE_DIR="$SOURCE_DIR" \
+  WORKSPACE="$WORKSPACE" \
+  COMMAND_EXIT_CODE="$COMMAND_EXIT_CODE" \
+  FINAL_EXIT_CODE="$FINAL_EXIT_CODE" \
+  TIMED_OUT="$TIMED_OUT" \
+  DURATION_SECONDS="$DURATION_SECONDS" \
+  SECRET_SCAN="$SECRET_SCAN" \
+  KEEP_WORKSPACE="$KEEP_WORKSPACE" \
+  python3 - <<'PY'
+import fcntl
+import json
+import os
+from datetime import datetime, timezone
+
+log_path = os.environ["LOG_FILE"]
+entry = {
+    "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "task": os.environ.get("TASK_NAME") or "unnamed-task",
+    "mode": os.environ["ISOLATION_MODE"],
+    "sourceDir": os.environ["SOURCE_DIR"],
+    "workspace": os.environ["WORKSPACE"],
+    "command": json.loads(os.environ["COMMAND_JSON"]),
+    "commandExitCode": int(os.environ["COMMAND_EXIT_CODE"]),
+    "finalExitCode": int(os.environ["FINAL_EXIT_CODE"]),
+    "timedOut": os.environ["TIMED_OUT"] == "1",
+    "durationSeconds": int(os.environ["DURATION_SECONDS"]),
+    "patchFile": os.environ["PATCH_FILE"],
+    "secretScan": os.environ["SECRET_SCAN"],
+    "keptWorkspace": os.environ["KEEP_WORKSPACE"] == "1",
+}
+
+os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
+lock_path = f"{log_path}.lock"
+
+with open(lock_path, "w", encoding="utf-8") as lock_file:
+    fcntl.flock(lock_file, fcntl.LOCK_EX)
+    if os.path.exists(log_path):
+      try:
+        with open(log_path, "r", encoding="utf-8") as handle:
+          payload = json.load(handle)
+      except Exception:
+        payload = []
+    else:
+      payload = []
+
+    if not isinstance(payload, list):
+      payload = []
+
+    payload.append(entry)
+    with open(log_path, "w", encoding="utf-8") as handle:
+      json.dump(payload, handle, indent=2)
+      handle.write("\n")
+PY
+}
+
+create_workspace
+run_worker
+collect_patch
+
+FINAL_EXIT_CODE="$COMMAND_EXIT_CODE"
+
+if ! scan_patch_for_secrets; then
+  if [[ $FINAL_EXIT_CODE -eq 0 ]]; then
+    FINAL_EXIT_CODE=70
+  fi
+fi
+
+append_log_entry
+
+printf 'mode: %s\n' "$ISOLATION_MODE"
+if [[ $KEEP_WORKSPACE -eq 1 ]]; then
+  printf 'workspace: %s\n' "$WORKSPACE"
+else
+  printf 'workspace: cleaned after run\n'
+fi
+printf 'patch: %s\n' "$PATCH_FILE"
+printf 'log: %s\n' "$LOG_FILE"
+printf 'command-exit: %s\n' "$COMMAND_EXIT_CODE"
+printf 'final-exit: %s\n' "$FINAL_EXIT_CODE"
+
+exit "$FINAL_EXIT_CODE"
