@@ -1,7 +1,7 @@
 {
   "name": "claude-superpack",
-  "version": "2.0.0",
-  "description": "Token-efficient multi-agent orchestration for Claude Code with auto-classification, parallel subagent execution, conflict-aware routing, and structured merge coordination.",
+  "version": "3.0.0",
+  "description": "22-skill agentic system for Claude Code: orchestration, persistent memory, codebase knowledge graph, token optimization, workflow automation, and self-improving learning.",
   "author": {
     "name": "Sahil Bansal",
     "url": "https://github.com/sahilbnsll"
@@ -15,18 +15,20 @@
     "parallel-execution",
     "agents",
     "orchestration",
-    "worktrees",
-    "auto-classification",
-    "context-efficiency",
+    "persistent-memory",
+    "knowledge-graph",
+    "codebase-analysis",
+    "blast-radius",
+    "token-optimization",
+    "error-catalog",
+    "pattern-learning",
     "multi-agent",
-    "subagent",
-    "merge-coordination",
-    "token-optimization"
+    "workflow-automation"
   ],
   "interface": {
     "displayName": "Claude Superpack",
-    "shortDescription": "Token-efficient multi-agent orchestration for Claude Code.",
-    "longDescription": "Claude Superpack v2 adds intelligent auto-routing, token-efficient context management, and multi-agent orchestration to Claude Code. It classifies every request (direct answer, single-agent, parallel, or serial complex), spawns isolated subagent workers via the Agent tool or safe-summon runner, detects write-surface conflicts, and merges results through a structured coordination pipeline. Designed for production-grade reliability with minimal token waste.",
+    "shortDescription": "22-skill agentic system: orchestration + memory + knowledge graph + learning.",
+    "longDescription": "Claude Superpack v3 transforms Claude Code into a self-improving agentic system with 22 skills across 6 categories. ORCHESTRATION: auto-classify requests (A/B/C/D), decompose into DAGs, detect conflicts, spawn isolated workers, merge results. MEMORY: persistent context across sessions — recent (48h rolling), long-term (distilled patterns), and per-project state. KNOWLEDGE GRAPH: zero-dependency structural mapping of any codebase using only Glob/Grep/Read, with blast-radius-aware code review that reads 80-90% fewer files. TOKEN EFFICIENCY: budget tracking, smart file discovery, skill reuse detection. WORKFLOW: pre-flight checks, post-execution review, git-aware rollback. LEARNING: pattern tracking, user preference profiling, and a persistent error+fix catalog.",
     "developerName": "Sahil Bansal",
     "category": "Productivity",
     "capabilities": [
@@ -35,14 +37,20 @@
       "Parallel planning",
       "Multi-agent orchestration",
       "Token optimization",
-      "Subagent execution"
+      "Persistent memory",
+      "Codebase knowledge graph",
+      "Blast radius analysis",
+      "Pattern learning",
+      "Error cataloging"
     ],
     "websiteURL": "https://github.com/sahilbnsll/claude-superpack",
     "defaultPrompt": [
       "Fix a bug, add tests, and update docs safely.",
       "Refactor the auth module across all consumers.",
-      "Run parallel workers with isolated worktrees.",
-      "Implement this feature using the most efficient approach."
+      "What depends on the database module?",
+      "Remember what we decided about the auth architecture.",
+      "Show me the blast radius for this change.",
+      "What errors have we seen before in this project?"
     ],
     "brandColor": "#0F766E"
   }

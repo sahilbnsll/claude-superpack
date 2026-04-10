@@ -69,6 +69,60 @@ function install() {
     console.log(`   ✅ bin/safe-summon (executable)`);
   }
 
+  // Copy scripts
+  for (const script of ['consolidate-memory.js']) {
+    const src = path.join(packageRoot, 'scripts', script);
+    const dest = path.join(targetDir, 'scripts', script);
+    if (fs.existsSync(src)) {
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.copyFileSync(src, dest);
+      console.log(`   ✅ scripts/${script}`);
+    }
+  }
+
+  // Create memory directory structure
+  const memoryDir = path.join(os.homedir(), '.claude', 'memory');
+  const projectsDir = path.join(memoryDir, 'projects');
+  fs.mkdirSync(projectsDir, { recursive: true });
+
+  // Create initial memory files if they don't exist
+  const recentPath = path.join(memoryDir, 'recent.md');
+  if (!fs.existsSync(recentPath)) {
+    fs.writeFileSync(recentPath,
+      '# Recent Memory\nRolling 48-hour context. Auto-pruned entries older than 48 hours.\n');
+    console.log(`   ✅ memory/recent.md (created)`);
+  }
+
+  const longTermPath = path.join(memoryDir, 'long-term.md');
+  if (!fs.existsSync(longTermPath)) {
+    fs.writeFileSync(longTermPath, [
+      '# Long-Term Memory',
+      'Distilled facts, preferences, and patterns.',
+      '',
+      '## Preferences',
+      '',
+      '## Patterns',
+      '',
+      '## Facts',
+      '',
+      '## Recurring Errors',
+      '',
+    ].join('\n'));
+    console.log(`   ✅ memory/long-term.md (created)`);
+  }
+
+  const indexPath = path.join(memoryDir, 'index.json');
+  if (!fs.existsSync(indexPath)) {
+    fs.writeFileSync(indexPath, JSON.stringify({
+      recent: { entries: 0, last_updated: new Date().toISOString() },
+      long_term: { entries: 0, last_updated: new Date().toISOString() },
+      last_consolidation: null,
+      projects: {},
+    }, null, 2) + '\n');
+  }
+
+  console.log(`   ✅ memory/ directory ready`);
+
   // Count installed skills
   const skillsDir = path.join(targetDir, 'skills');
   const skillCount = fs.existsSync(skillsDir)
@@ -78,6 +132,7 @@ function install() {
     : 0;
 
   console.log(`\n✨ Installed ${skillCount} skills to ${targetDir}`);
+  console.log(`   Memory system ready at ${memoryDir}`);
   console.log(`   Skills are available in your next Claude Code session.\n`);
 }
 

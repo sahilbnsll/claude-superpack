@@ -1,108 +1,162 @@
 # Claude Superpack
 
-Token-efficient multi-agent orchestration for Claude Code.
+**22-skill agentic system for Claude Code.** Orchestration + persistent memory + codebase knowledge graph + token optimization + workflow automation + self-improving learning — all zero-dependency.
 
-Claude Superpack v2 is a native Claude Code plugin that automatically classifies request complexity, decomposes tasks into structured DAGs, detects write-surface conflicts, spawns isolated worker agents, and merges results through a coordinated pipeline -- all while minimizing token usage.
+## What It Does
 
-## Demo
+Claude Superpack transforms Claude Code from a single-shot assistant into a **persistent, self-improving agent** that remembers across sessions, maps your codebase structurally, learns from its mistakes, and orchestrates complex tasks across parallel workers.
 
-Simple task (Class A -- direct response):
+### Quick Examples
 
+**Simple task** — answered directly, no overhead:
 ```text
-$ claude
 > Explain how the authentication middleware works.
+
+Classification: A | Route: direct
 ```
 
-- Auto-router classifies as Class A.
-- Claude answers normally.
-- No orchestration overhead.
-
-Complex task (Class C -- parallel orchestration):
-
+**Complex task** — full orchestration pipeline:
 ```text
-$ claude
 > Fix the auth validation bug, add regression tests, and update the README.
+
+Classification: C | Route: parallel-orchestrate
+Pre-flight: ✅ 7/7 checks passed
+Workers: 3 spawned (auth-fix, tests, docs)
+Post-review: ✅ lint, typecheck, tests passed
 ```
 
-- Auto-router classifies as Class C (three distinct deliverables).
-- Task-decomposer produces a DAG with workstream IDs, dependencies, and complexity scores.
-- Conflict-detector forms parallel groups: [fix + readme] concurrent, [tests] after fix.
-- Orchestrator spawns isolated workers (Agent tool in worktrees).
-- Merge-coordinator validates scope, checks for conflicts, produces structured summary.
+**Memory query** — recalls past sessions:
+```text
+> Remember what we decided about the database schema?
 
-Direct runner example:
-
-```bash
-bash ./bin/safe-summon \
-  --task "auth-fix" \
-  --timeout 180 \
-  --mode auto \
-  -- python3 -c "print('worker ran')"
+Memory Search: 2 results
+  [decision] 2026-04-04: Switched to array-based schema for flexibility
+  [decision] 2026-04-06: Added multi-provider AI failover
 ```
 
-## Problem
+**Blast radius** — reads only what matters:
+```text
+> Review the changes to src/auth.ts
 
-Large code-change requests are hard to handle reliably in a shared workspace.
+Blast Radius: 5 files (vs 47 total)
+Token savings: ~87%
+```
 
-- One broad request can turn into several unrelated edits.
-- Shared files and generated artifacts create merge and review risk.
-- Reading entire files wastes context when only a few lines matter.
-- Spawning agents for trivial tasks adds overhead without benefit.
-- Long-running commands can hang without a hard execution boundary.
+---
 
-## Solution
+## Skills (22)
 
-Claude Superpack v2 packages an intelligent orchestration workflow as a native Claude Code plugin:
+### 🎯 Orchestration (5 skills)
 
-- **auto-router** classifies every request (A: direct, B: single-agent, C: parallel, D: serial complex).
-- **task-decomposer** produces structured DAGs with deterministic IDs, complexity scores, and model tier assignments.
-- **conflict-detector** maps write surfaces, detects overlaps, and forms parallel execution groups.
-- **parallel-orchestrator** spawns isolated workers via the Agent tool or `safe-summon`, with adaptive execution modes.
-- **merge-coordinator** validates scope, detects emergent conflicts, and produces compact structured summaries.
-- **safe-summon** provides the execution engine with git-worktree or filesystem-copy isolation, timeout enforcement, diff capture, secret scanning, and JSON logging.
+The original core — intelligent task routing and parallel execution.
 
-## Features
+| Skill | Purpose |
+|---|---|
+| **auto-router** | Classifies requests A/B/C/D, routes to simplest sufficient workflow |
+| **task-decomposer** | Breaks complex requests into DAGs with IDs, dependencies, model tiers |
+| **conflict-detector** | Maps write surfaces, detects overlaps, forms parallel groups |
+| **parallel-orchestrator** | Spawns isolated workers via Agent tool or safe-summon |
+| **merge-coordinator** | Validates scope, detects conflicts, produces structured summaries |
 
-- Automatic request classification (A/B/C/D) with explicit routing.
-- Token-efficient context management: Glob -> Grep -> Read(offset, limit).
-- DAG-based task decomposition with deterministic workstream IDs.
-- Pairwise conflict detection with parallel group formation.
-- Dual execution model: Agent-tool subagents for reasoning, safe-summon for shell commands.
-- Adaptive execution modes: safe (validate between steps) and fast (maximum parallelism).
-- Model tier optimization: haiku for exploration, sonnet for implementation, opus for architecture.
-- Structured merge coordination with scope validation and conflict detection.
-- Worker count caps (4 agents, 6 shell workers) for stability.
-- All v1 safety guarantees preserved: timeout enforcement, workspace isolation, secret scanning, human review.
+### 🧠 Memory (4 skills)
+
+Persistent context across sessions. No external databases — pure markdown.
+
+| Skill | Purpose |
+|---|---|
+| **memory-manager** | Session lifecycle: load memory at start, record during work, prune on exit |
+| **project-memory** | Per-project state: tech stack, architecture, known issues, decisions |
+| **memory-search** | Query past context: keyword, tag, temporal, and optional semantic search |
+| **memory-consolidator** | Nightly distillation: extract patterns from recent, promote to long-term |
+
+**Storage**: `~/.claude/memory/` (recent.md, long-term.md, projects/)
+
+### 🗺️ Knowledge Graph (4 skills)
+
+Structural codebase mapping with zero external dependencies. No Tree-sitter, no SQLite, no pip install — works on first prompt.
+
+| Skill | Purpose |
+|---|---|
+| **graph-builder** | Build structural map using only Glob/Grep/Read. 12 languages, lazy build |
+| **graph-reviewer** | Blast-radius-aware code review. Reads 80-90% fewer files |
+| **graph-navigator** | Answer architecture questions: deps, coupling, dead code, coverage |
+| **graph-updater** | Incremental hash-based updates. No full rebuilds needed |
+
+**Storage**: `~/.claude/graphs/<project-slug>/` (graph.json, blast-cache.json, architecture.md)
+
+### 🔍 Token Efficiency (3 skills)
+
+Make every token count.
+
+| Skill | Purpose |
+|---|---|
+| **context-budget** | Running token usage estimate with threshold warnings and compaction protocol |
+| **smart-discovery** | Intelligent file selection: gitignore-aware, recency-biased, graph-aware |
+| **skill-reuse-detector** | Check installed skills before implementing — stop reinventing wheels |
+
+### 🔄 Workflow (3 skills)
+
+Safety nets for orchestrated execution.
+
+| Skill | Purpose |
+|---|---|
+| **pre-flight** | Validate environment before workers: git, tools, deps, disk, memory, graph |
+| **post-review** | Auto-review after merge: scoped lint, typecheck, test subset |
+| **rollback** | Undo by workstream: selective, git-aware, always confirms before acting |
+
+### 🎓 Learning (3 skills)
+
+Self-improving agent that gets better over time.
+
+| Skill | Purpose |
+|---|---|
+| **pattern-tracker** | Track classification decisions + outcomes. Feed stats back to auto-router |
+| **user-profiler** | Learn preferences from behavior: code style, tools, communication. Apply silently |
+| **error-catalog** | Persistent error+fix database. Pattern matching before debugging from scratch |
+
+---
 
 ## Architecture
 
 ```text
 User request
-   |
-   v
+   │
+   ▼
 auto-router (classify A/B/C/D)
-   |
-   +-- A --> direct answer
-   +-- B --> task-decomposer --> sequential execution
-   +-- C --> task-decomposer --> conflict-detector --> parallel-orchestrator
-   |              |                                          |
-   |              |                                   [worker agents]
-   |              |                                          |
-   |              |                                   merge-coordinator
-   +-- D --> task-decomposer --> conflict-detector --> serial execution
-                                                            |
-                                                      merge-coordinator
-```
+   │
+   ├── skill-reuse-detector ─── check existing skills
+   ├── memory-manager ───────── load session context
+   ├── context-budget ───────── track token usage
+   │
+   ├── A ──▶ direct answer
+   ├── B ──▶ smart-discovery ──▶ single-agent execution
+   ├── C ──▶ pre-flight ──▶ task-decomposer ──▶ conflict-detector
+   │                │                                    │
+   │                │                          parallel-orchestrator
+   │                │                                    │
+   │                │                            [worker agents]
+   │                │                                    │
+   │                │                          merge-coordinator
+   │                │                                    │
+   │                │                            post-review
+   │                │                                    │
+   │                ▼                            pattern-tracker
+   └── D ──▶ serial complex (same pipeline, sequential workers)
 
-More detail: [docs/architecture.md](./docs/architecture.md)
+Background (always active):
+  memory-manager ──▶ record decisions ──▶ memory-consolidator
+  graph-updater ──▶ keep graph current
+  user-profiler ──▶ learn preferences
+  error-catalog ──▶ catalog errors + fixes
+```
 
 ## Installation
 
 ### npm install (via GitHub Packages)
 
-The recommended way to install. Requires Node.js 18+.
+Recommended. Requires Node.js 18+.
 
-1. Create a `.npmrc` in your home directory (or project root) to tell npm where to find the package:
+1. Configure npm to find the package:
 
 ```bash
 echo "@sahilbnsll:registry=https://npm.pkg.github.com" >> ~/.npmrc
@@ -114,11 +168,14 @@ echo "@sahilbnsll:registry=https://npm.pkg.github.com" >> ~/.npmrc
 npm install -g @sahilbnsll/claude-superpack
 ```
 
-The postinstall script automatically copies all skills into `~/.claude/skills/claude-superpack`. They are available in your next Claude Code session.
+The postinstall script:
+- Copies all 22 skills to `~/.claude/skills/claude-superpack`
+- Creates `~/.claude/memory/` directory structure
+- Initializes memory files (recent.md, long-term.md, index.json)
+
+Available in your next Claude Code session immediately.
 
 ### Git clone (alternative)
-
-If you prefer not to use npm:
 
 ```bash
 git clone https://github.com/sahilbnsll/claude-superpack ~/.claude/skills/claude-superpack
@@ -134,84 +191,54 @@ npm uninstall -g @sahilbnsll/claude-superpack
 rm -rf ~/.claude/skills/claude-superpack
 ```
 
-### CLI
-
-If installed via npm, a `claude-superpack` CLI is available:
+## CLI
 
 ```bash
-claude-superpack status      # Check installation status
-claude-superpack install     # Reinstall skills
-claude-superpack uninstall   # Remove skills
-claude-superpack version     # Show version
+claude-superpack status               # Overall status
+claude-superpack skills               # List all 22 skills by category
+claude-superpack memory               # Memory system stats
+claude-superpack memory consolidate   # Run memory consolidation
+claude-superpack graph                # Knowledge graph stats
+claude-superpack install              # Reinstall skills
+claude-superpack uninstall            # Remove skills
+claude-superpack version              # Show version
 ```
 
-### Runtime requirements
+### Scheduled Consolidation (optional)
 
-- `bash`
-- `python3`
-- `timeout` or `gtimeout`
-- `git` for worktree mode
+Run memory consolidation nightly via cron:
 
-Native manifest location:
-
-```text
-.claude-plugin/plugin.json
+```bash
+# Add to crontab
+(crontab -l 2>/dev/null; echo "0 2 * * * node ~/.claude/skills/claude-superpack/scripts/consolidate-memory.js --quiet") | crontab -
 ```
 
-## Usage
+## Runtime Requirements
 
-Simple requests remain simple:
-
-```text
-$ claude
-> Explain the request lifecycle for this service.
-```
-
-- Auto-router: Class A. Claude answers directly.
-
-Complex requests trigger intelligent orchestration:
-
-```text
-$ claude
-> Refactor the API layer, update all consumers, and add integration tests.
-```
-
-- Auto-router: Class C. Full pipeline activates.
-
-More examples: [docs/usage.md](./docs/usage.md)
+- `bash`, `python3`, `timeout`/`gtimeout`, `git`
+- **No external databases.** Memory uses markdown files. Graph uses JSON files.
+- **Optional**: ChromaDB + Gemini API key for semantic memory search (graceful degradation to grep without them)
 
 ## Token Efficiency
 
-Superpack v2 treats context as the most expensive resource:
+Superpack v3 treats context as the most expensive resource:
 
-- **Discovery**: Glob -> Grep -> Read(offset, limit). Never read full files over 100 lines.
-- **Worker prompts**: under 2000 tokens. Only task, paths, and minimal context.
-- **Model selection**: lightest model that can handle each workstream.
-- **Compaction**: proactive `/compact` after each phase.
-- **Output**: structured JSON, diffs, and summaries -- never full file dumps.
-
-Full protocol: [docs/token-efficiency.md](./docs/token-efficiency.md)
+- **Smart discovery**: gitignore-aware, recency-biased, graph-aware file selection
+- **Blast radius**: read only affected files during review (~87% fewer tokens)
+- **Context budget**: running estimates with proactive compaction suggestions
+- **Worker prompts**: under 2,000 tokens each
+- **Model tiering**: lightest model per workstream (haiku → sonnet → opus)
+- **Compaction protocol**: structured summaries replace raw data after each phase
 
 ## Safety Guarantees
 
-- Worker execution is time-bounded. Missing timeout backend = fail closed.
-- `auto` mode falls back to filesystem copy when the repository has local changes.
-- Explicit `--mode git` fails on a dirty repository.
-- Every run gets a unique patch artifact path.
-- Patch output is scanned for common secret patterns.
-- Human review remains part of the operating model.
-- **New in v2**: Workers are validated against their assigned file ownership.
-- **New in v2**: Adaptive safe/fast execution modes based on conflict analysis.
-- **New in v2**: Worker count caps prevent runaway agent spawning.
-
-## How It Works
-
-1. Claude receives a request.
-2. `auto-router` classifies it (A/B/C/D) and routes accordingly.
-3. For complex requests: `task-decomposer` produces a DAG with IDs, complexity scores, and model tiers.
-4. `conflict-detector` analyzes write surfaces and forms parallel execution groups.
-5. `parallel-orchestrator` spawns workers (Agent tool or safe-summon) with appropriate isolation.
-6. `merge-coordinator` collects outputs, validates scope, and produces a structured summary.
+- Worker execution is time-bounded with timeout enforcement
+- Pre-flight validation before every orchestrated execution
+- Post-review validation after every merge
+- Rollback with pre-rollback snapshots and always-confirm protocol
+- Patch output scanned for secret patterns
+- Worker scope validation against assigned file ownership
+- Memory and graph data stays local — never transmitted anywhere
 
 ## Repository Layout
 
@@ -219,72 +246,80 @@ Full protocol: [docs/token-efficiency.md](./docs/token-efficiency.md)
 claude-superpack/
 ├── .claude-plugin/
 │   └── plugin.json
-├── .github/
-│   └── workflows/
-│       └── publish.yml
-├── .npmrc
+├── .github/workflows/publish.yml
 ├── package.json
-├── LICENSE
-├── README.md
 ├── scripts/
 │   ├── cli.js
 │   ├── install.js
-│   └── uninstall.js
-├── docs/
-│   ├── architecture.md
-│   ├── token-efficiency.md
-│   └── usage.md
-├── examples/
-│   ├── simple.md
-│   ├── complex.md
-│   ├── parallel-agents.md
-│   └── serial-complex.md
+│   ├── uninstall.js
+│   └── consolidate-memory.js
 ├── bin/
 │   └── safe-summon
+├── docs/
+├── examples/
 └── skills/
-    ├── auto-router/
-    │   └── SKILL.md
+    ├── auto-router/          # Orchestration
     ├── task-decomposer/
-    │   └── SKILL.md
     ├── conflict-detector/
-    │   └── SKILL.md
     ├── parallel-orchestrator/
-    │   └── SKILL.md
-    └── merge-coordinator/
-        └── SKILL.md
+    ├── merge-coordinator/
+    ├── memory-manager/       # Memory
+    ├── project-memory/
+    ├── memory-search/
+    ├── memory-consolidator/
+    ├── graph-builder/        # Knowledge Graph
+    ├── graph-reviewer/
+    ├── graph-navigator/
+    ├── graph-updater/
+    ├── context-budget/       # Token Efficiency
+    ├── smart-discovery/
+    ├── skill-reuse-detector/
+    ├── pre-flight/           # Workflow
+    ├── post-review/
+    ├── rollback/
+    ├── pattern-tracker/      # Learning
+    ├── user-profiler/
+    └── error-catalog/
 ```
 
-## Limitations
+## Data Directories
 
-- Orchestration is only appropriate when workstreams are genuinely separable.
-- Worktree mode requires a clean git repository with a committed `HEAD`.
-- The runner depends on `timeout` or `gtimeout`.
-- Token efficiency is a design principle; complex tasks still require context.
-- Worker count caps mean very large tasks must be batched into phases.
-- The plugin emits artifacts and summaries but does not auto-apply changes.
+Created automatically on install:
 
-## Roadmap
+```text
+~/.claude/memory/              # Persistent memory
+├── recent.md                  # Rolling 48-hour context
+├── long-term.md               # Distilled patterns & preferences
+├── index.json                 # Metadata
+└── projects/                  # Per-project state
+    └── <project-slug>.md
 
-- Hook-based automation (UserPromptSubmit for auto-routing, SubagentStop for result persistence).
-- Persistent cross-session memory for repo understanding (semantic layer).
-- Skill reuse detection (check installed skills before implementing).
-- Portable timeout backend for environments without `timeout` or `gtimeout`.
-- Richer observability dashboards for multi-agent execution.
+~/.claude/graphs/              # Codebase graphs (created on first use)
+└── <project-slug>/
+    ├── graph.json             # Structural map
+    ├── graph-meta.json        # File hashes, timestamps
+    ├── blast-cache.json       # Cached blast radius
+    └── architecture.md        # Auto-generated overview
+```
 
 ## Contributing
 
 Issues and pull requests are welcome.
 
-When contributing:
-
-- keep the native Claude plugin layout intact,
-- keep claims aligned with the actual implementation,
-- update docs and examples when behavior changes,
-- validate the manifest and runner before submitting changes.
-
-Useful checks:
-
 ```bash
+# Validate skills
+for f in skills/*/SKILL.md; do head -3 "$f" | grep -q "^---" && echo "✅ $f" || echo "❌ $f"; done
+
+# Validate JSON
 python3 -m json.tool .claude-plugin/plugin.json
+
+# Validate bash
 bash -n bin/safe-summon
+
+# Validate scripts
+node -c scripts/install.js && node -c scripts/cli.js && node -c scripts/consolidate-memory.js
 ```
+
+## License
+
+MIT

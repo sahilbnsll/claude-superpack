@@ -1,7 +1,7 @@
 {
   "name": "@sahilbnsll/claude-superpack",
-  "version": "2.0.0",
-  "description": "Token-efficient multi-agent orchestration for Claude Code with auto-classification, parallel subagent execution, conflict-aware routing, and structured merge coordination.",
+  "version": "3.0.0",
+  "description": "22-skill agentic system for Claude Code: multi-agent orchestration, persistent memory, codebase knowledge graph, token optimization, workflow automation, and self-improving learning — all zero-dependency.",
   "author": "Sahil Bansal <https://github.com/sahilbnsll>",
   "license": "MIT",
   "repository": {
@@ -16,7 +16,13 @@
     "multi-agent",
     "orchestration",
     "parallel-execution",
-    "token-optimization"
+    "token-optimization",
+    "persistent-memory",
+    "knowledge-graph",
+    "codebase-analysis",
+    "blast-radius",
+    "error-catalog",
+    "pattern-learning"
   ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
