@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sahilbnsll/claude-superpack.git"
+    "url": "git+https://github.com/sahilbnsll/claude-superpack.git"
   },
   "homepage": "https://github.com/sahilbnsll/claude-superpack",
   "keywords": [
@@ -36,6 +36,6 @@
     "preuninstall": "node scripts/uninstall.js"
   },
   "bin": {
-    "claude-superpack": "./scripts/cli.js"
+    "claude-superpack": "scripts/cli.js"
   }
 }
