@@ -1,4 +1,26 @@
+# macOS
 .DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# macOS duplicate conflict files (iCloud / Finder copies)
+*\ 2
+*\ 2.*
+
+# Safe-summon runtime artifacts
 .safe-summon/
+
+# Execution logs (generated at runtime)
 claude-execution-log.json
 claude-execution-log.json.lock
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (in case any tooling is added later)
+node_modules/

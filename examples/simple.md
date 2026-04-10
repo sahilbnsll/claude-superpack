@@ -1,6 +1,6 @@
-# Simple Example
+# Simple Example (Class A)
 
-This example shows the intended behavior for a request that does not need orchestration.
+This example shows the intended behavior for requests that need no orchestration.
 
 ## Prompt
 
@@ -9,16 +9,25 @@ $ claude
 > Explain how the authentication middleware works.
 ```
 
-## Before
+## What Happens
 
-- A standard Claude Code session would answer directly.
-
-## After Enabling Claude Superpack
-
-- Claude should still answer directly.
-- No decomposition is needed.
-- No isolated worker execution should occur.
+1. **Auto-router** classifies as **Class A** (explanation, no code changes).
+2. Claude answers directly.
+3. No skills activate. No files are read unnecessarily. No workers spawn.
 
 ## Why This Matters
 
-Claude Superpack is designed to help with complex implementation work, not to add overhead to ordinary explanations or straightforward analysis.
+Superpack's auto-router ensures zero overhead for simple requests. The classification step itself costs minimal tokens (3 lines of output), and prevents the system from spinning up decomposition, conflict detection, or worker orchestration for questions that just need a direct answer.
+
+## Another Example
+
+```text
+$ claude
+> What does the useAuth hook return?
+```
+
+Classification: A
+Reasoning: Single question about existing code, no changes needed.
+Route: direct
+
+Claude answers using targeted Grep + Read(offset, limit) to find the hook definition, then responds.

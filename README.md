@@ -1,37 +1,34 @@
 # Claude Superpack
 
-Safer planner-worker execution for Claude Code.
+Token-efficient multi-agent orchestration for Claude Code.
 
-Claude Superpack is a native Claude Code plugin that helps Claude break down complex implementation requests, detect write-surface conflicts, and run isolated worker commands with bounded execution and structured artifacts.
+Claude Superpack v2 is a native Claude Code plugin that automatically classifies request complexity, decomposes tasks into structured DAGs, detects write-surface conflicts, spawns isolated worker agents, and merges results through a coordinated pipeline -- all while minimizing token usage.
 
 ## Demo
 
-Simple task:
+Simple task (Class A -- direct response):
 
 ```text
 $ claude
 > Explain how the authentication middleware works.
 ```
 
-Expected behavior:
-
+- Auto-router classifies as Class A.
 - Claude answers normally.
-- No orchestration is needed.
-- The plugin stays out of the way.
+- No orchestration overhead.
 
-Complex task:
+Complex task (Class C -- parallel orchestration):
 
 ```text
 $ claude
 > Fix the auth validation bug, add regression tests, and update the README.
 ```
 
-Expected behavior:
-
-- `task-decomposer` splits the request into workstreams.
-- `conflict-detector` checks whether those workstreams are safe to separate.
-- `parallel-orchestrator` recommends isolated worker execution only when the write surfaces are low-conflict.
-- `safe-summon` runs worker commands in isolated workspaces and records patch and log artifacts.
+- Auto-router classifies as Class C (three distinct deliverables).
+- Task-decomposer produces a DAG with workstream IDs, dependencies, and complexity scores.
+- Conflict-detector forms parallel groups: [fix + readme] concurrent, [tests] after fix.
+- Orchestrator spawns isolated workers (Agent tool in worktrees).
+- Merge-coordinator validates scope, checks for conflicts, produces structured summary.
 
 Direct runner example:
 
@@ -49,29 +46,33 @@ Large code-change requests are hard to handle reliably in a shared workspace.
 
 - One broad request can turn into several unrelated edits.
 - Shared files and generated artifacts create merge and review risk.
-- Dirty repositories make it easy to run workers against stale code.
+- Reading entire files wastes context when only a few lines matter.
+- Spawning agents for trivial tasks adds overhead without benefit.
 - Long-running commands can hang without a hard execution boundary.
 
 ## Solution
 
-Claude Superpack packages a planner-worker workflow as a native Claude Code plugin:
+Claude Superpack v2 packages an intelligent orchestration workflow as a native Claude Code plugin:
 
-- `task-decomposer` turns one large request into scoped workstreams.
-- `conflict-detector` checks whether those workstreams can be executed safely.
-- `parallel-orchestrator` coordinates isolated worker runs only when the split is low-risk.
-- `safe-summon` provides the execution engine with git-worktree or filesystem-copy isolation, timeout enforcement, diff capture, secret scanning, and JSON logging.
+- **auto-router** classifies every request (A: direct, B: single-agent, C: parallel, D: serial complex).
+- **task-decomposer** produces structured DAGs with deterministic IDs, complexity scores, and model tier assignments.
+- **conflict-detector** maps write surfaces, detects overlaps, and forms parallel execution groups.
+- **parallel-orchestrator** spawns isolated workers via the Agent tool or `safe-summon`, with adaptive execution modes.
+- **merge-coordinator** validates scope, detects emergent conflicts, and produces compact structured summaries.
+- **safe-summon** provides the execution engine with git-worktree or filesystem-copy isolation, timeout enforcement, diff capture, secret scanning, and JSON logging.
 
 ## Features
 
-- Native Claude Code plugin layout with manifest-driven packaging.
-- Planner-worker skill chain for complex implementation requests.
-- Conflict analysis before isolated worker execution.
-- Clean-repo `git worktree` isolation when a checked-in `HEAD` is available.
-- Dirty-repo and non-git fallback to filtered filesystem copy mode.
-- Fail-closed timeout enforcement for worker commands.
-- Unique patch artifacts for concurrent runs.
-- Structured JSON execution logs protected by file locking.
-- Secret-pattern scan over generated patch output.
+- Automatic request classification (A/B/C/D) with explicit routing.
+- Token-efficient context management: Glob -> Grep -> Read(offset, limit).
+- DAG-based task decomposition with deterministic workstream IDs.
+- Pairwise conflict detection with parallel group formation.
+- Dual execution model: Agent-tool subagents for reasoning, safe-summon for shell commands.
+- Adaptive execution modes: safe (validate between steps) and fast (maximum parallelism).
+- Model tier optimization: haiku for exploration, sonnet for implementation, opus for architecture.
+- Structured merge coordination with scope validation and conflict detection.
+- Worker count caps (4 agents, 6 shell workers) for stability.
+- All v1 safety guarantees preserved: timeout enforcement, workspace isolation, secret scanning, human review.
 
 ## Architecture
 
@@ -79,25 +80,18 @@ Claude Superpack packages a planner-worker workflow as a native Claude Code plug
 User request
    |
    v
-task-decomposer
+auto-router (classify A/B/C/D)
    |
-   v
-conflict-detector
-   |
-   v
-parallel-orchestrator
-   |
-   v
-safe-summon
-   |-- clean git repo --> detached worktree
-   \-- dirty/non-git --> filtered filesystem copy
-   |
-   v
-worker command
-   |
-   +--> patch artifact
-   +--> execution log
-   \--> human review before merge
+   +-- A --> direct answer
+   +-- B --> task-decomposer --> sequential execution
+   +-- C --> task-decomposer --> conflict-detector --> parallel-orchestrator
+   |              |                                          |
+   |              |                                   [worker agents]
+   |              |                                          |
+   |              |                                   merge-coordinator
+   +-- D --> task-decomposer --> conflict-detector --> serial execution
+                                                            |
+                                                      merge-coordinator
 ```
 
 More detail: [docs/architecture.md](./docs/architecture.md)
@@ -113,14 +107,12 @@ git clone https://github.com/sahilbnsll/claude-superpack ~/.claude/plugins/claud
 
 ### Marketplace install
 
-If this plugin is published through a Claude Code marketplace catalog, installation may look like:
+If this plugin is published through a Claude Code marketplace catalog:
 
 ```bash
 /plugin marketplace add sahilbnsll/your-marketplace-repo
 /plugin install claude-superpack@your-marketplace-repo
 ```
-
-Replace `your-marketplace-repo` with the catalog repository that indexes this plugin. This repository is the plugin payload, not the marketplace index itself.
 
 ### Runtime requirements
 
@@ -137,51 +129,58 @@ Native manifest location:
 
 ## Usage
 
-Simple requests should remain simple:
+Simple requests remain simple:
 
 ```text
 $ claude
 > Explain the request lifecycle for this service.
 ```
 
-Expected result:
+- Auto-router: Class A. Claude answers directly.
 
-- Claude answers directly.
-- No isolated worker execution is necessary.
-
-Complex requests should trigger planning first:
+Complex requests trigger intelligent orchestration:
 
 ```text
 $ claude
-> Break this refactor into low-conflict workstreams and use isolated workspaces for the risky changes.
+> Refactor the API layer, update all consumers, and add integration tests.
 ```
 
-Expected result:
-
-- Claude decomposes the task.
-- Claude checks overlap between workstreams.
-- Claude only recommends isolated worker execution when the split is safe.
+- Auto-router: Class C. Full pipeline activates.
 
 More examples: [docs/usage.md](./docs/usage.md)
 
+## Token Efficiency
+
+Superpack v2 treats context as the most expensive resource:
+
+- **Discovery**: Glob -> Grep -> Read(offset, limit). Never read full files over 100 lines.
+- **Worker prompts**: under 2000 tokens. Only task, paths, and minimal context.
+- **Model selection**: lightest model that can handle each workstream.
+- **Compaction**: proactive `/compact` after each phase.
+- **Output**: structured JSON, diffs, and summaries -- never full file dumps.
+
+Full protocol: [docs/token-efficiency.md](./docs/token-efficiency.md)
+
 ## Safety Guarantees
 
-- Worker execution is time-bounded. If no timeout backend exists, the runner fails closed instead of running indefinitely.
-- `auto` mode never uses a stale clean worktree when the repository has local changes. It falls back to filesystem copy mode instead.
-- Explicit `--mode git` fails on a dirty repository rather than silently running against `HEAD`.
-- Every run gets a unique patch artifact path to avoid collisions under concurrency.
-- Generated patch output is scanned for common secret patterns before a success result is finalized.
-- Human review remains part of the operating model. The plugin does not auto-merge or auto-apply diffs.
+- Worker execution is time-bounded. Missing timeout backend = fail closed.
+- `auto` mode falls back to filesystem copy when the repository has local changes.
+- Explicit `--mode git` fails on a dirty repository.
+- Every run gets a unique patch artifact path.
+- Patch output is scanned for common secret patterns.
+- Human review remains part of the operating model.
+- **New in v2**: Workers are validated against their assigned file ownership.
+- **New in v2**: Adaptive safe/fast execution modes based on conflict analysis.
+- **New in v2**: Worker count caps prevent runaway agent spawning.
 
 ## How It Works
 
-1. Claude receives a complex request.
-2. `task-decomposer` produces a small set of concrete workstreams.
-3. `conflict-detector` checks those workstreams for shared files, generated outputs, schemas, tests, or other collision points.
-4. `parallel-orchestrator` decides whether isolated worker execution is justified.
-5. `safe-summon` creates an isolated workspace, runs the worker command with a timeout, captures a patch, scans it, and appends a JSON log entry.
-
-This plugin does not ship a full scheduler or queue. It provides skills plus a safe runner that Claude can use to coordinate implementation work more carefully.
+1. Claude receives a request.
+2. `auto-router` classifies it (A/B/C/D) and routes accordingly.
+3. For complex requests: `task-decomposer` produces a DAG with IDs, complexity scores, and model tiers.
+4. `conflict-detector` analyzes write surfaces and forms parallel execution groups.
+5. `parallel-orchestrator` spawns workers (Agent tool or safe-summon) with appropriate isolation.
+6. `merge-coordinator` collects outputs, validates scope, and produces a structured summary.
 
 ## Repository Layout
 
@@ -193,35 +192,44 @@ claude-superpack/
 ├── README.md
 ├── docs/
 │   ├── architecture.md
+│   ├── token-efficiency.md
 │   └── usage.md
 ├── examples/
+│   ├── simple.md
 │   ├── complex.md
-│   └── simple.md
+│   ├── parallel-agents.md
+│   └── serial-complex.md
 ├── bin/
 │   └── safe-summon
 └── skills/
+    ├── auto-router/
+    │   └── SKILL.md
+    ├── task-decomposer/
+    │   └── SKILL.md
     ├── conflict-detector/
     │   └── SKILL.md
     ├── parallel-orchestrator/
     │   └── SKILL.md
-    └── task-decomposer/
+    └── merge-coordinator/
         └── SKILL.md
 ```
 
 ## Limitations
 
-- This plugin coordinates safe execution patterns; it is not a full orchestration service.
-- Parallel execution is only appropriate when workstreams are genuinely low-conflict.
+- Orchestration is only appropriate when workstreams are genuinely separable.
 - Worktree mode requires a clean git repository with a committed `HEAD`.
-- The runner depends on `timeout` or `gtimeout` instead of shipping an internal portable timeout backend.
-- The plugin emits patch artifacts and logs, but it does not apply patches automatically.
+- The runner depends on `timeout` or `gtimeout`.
+- Token efficiency is a design principle; complex tasks still require context.
+- Worker count caps mean very large tasks must be batched into phases.
+- The plugin emits artifacts and summaries but does not auto-apply changes.
 
 ## Roadmap
 
-- Optional portable timeout backend for environments without `timeout` or `gtimeout`.
-- Richer run summaries for patch and log artifacts.
-- Smarter write-surface heuristics for decomposition and conflict checks.
-- Additional examples and publishing guidance for marketplace catalog setup.
+- Hook-based automation (UserPromptSubmit for auto-routing, SubagentStop for result persistence).
+- Persistent cross-session memory for repo understanding (semantic layer).
+- Skill reuse detection (check installed skills before implementing).
+- Portable timeout backend for environments without `timeout` or `gtimeout`.
+- Richer observability dashboards for multi-agent execution.
 
 ## Contributing
 

@@ -1,100 +1,183 @@
 # Architecture
 
-Claude Superpack is organized around a planner-worker model implemented through three native Claude Code skills and one execution runner.
+Claude Superpack v2 is a token-efficient multi-agent orchestration system built as a native Claude Code plugin. It classifies requests, decomposes complex tasks into DAGs, detects conflicts, spawns isolated workers, and merges results.
 
-## Planner -> Worker Model
-
-Planner layer:
-
-- `task-decomposer` splits a broad request into explicit workstreams.
-- `conflict-detector` decides whether those workstreams have overlapping write surfaces.
-- `parallel-orchestrator` only recommends isolated worker execution when the split is safe.
-
-Worker layer:
-
-- `safe-summon` creates an isolated workspace.
-- A worker command runs inside that workspace with a hard timeout.
-- The runner emits a patch artifact and appends a JSON log entry.
-
-This keeps planning separate from execution. Claude reasons about scope first, then uses the runner only when there is a clear boundary for the work.
-
-## Dual-Mode Execution
-
-The execution engine supports two isolation modes.
-
-### Git worktree mode
-
-Used when:
-
-- the source is inside a git repository,
-- a checked-in `HEAD` exists,
-- the repository is clean.
-
-Behavior:
-
-- creates a detached worktree,
-- runs the worker inside that isolated tree,
-- captures a git binary diff against `HEAD`,
-- removes the worktree after completion unless asked to keep it.
-
-### Filesystem copy mode
-
-Used when:
-
-- the repository is dirty,
-- there is no usable git `HEAD`,
-- the source is not in git,
-- or the caller explicitly selects copy mode.
-
-Behavior:
-
-- copies the source into a temporary workspace,
-- excludes common heavy directories and runner artifacts,
-- runs the worker in the copied tree,
-- captures a diff between source and isolated workspace.
-
-## Safety Layers
-
-Claude Superpack aims to reduce operational risk rather than maximize raw automation.
-
-- Timeout enforcement: worker commands must run through `timeout` or `gtimeout`; otherwise the runner fails closed.
-- Dirty-repo protection: `auto` mode falls back to filesystem copy instead of running against stale `HEAD`.
-- Explicit git-mode protection: `--mode git` fails on local changes instead of silently ignoring them.
-- Workspace isolation: workers do not run in the shared source tree.
-- Unique patch artifacts: concurrent runs do not overwrite each other's patch files.
-- Secret scanning: generated patch output is checked for common credential patterns.
-- Locked log writes: JSON log appends use file locking to avoid corruption under concurrency.
-- Human review: patches and logs are generated for review; the runner does not auto-merge.
-
-## Execution Flow
+## System Overview
 
 ```text
 User request
    |
    v
-task-decomposer
+auto-router (classify A/B/C/D)
    |
-   v
-conflict-detector
+   +-- A (Direct) ---------> answer immediately, no skills
    |
-   v
-parallel-orchestrator
+   +-- B (Single-agent) ---> task-decomposer --> sequential execution
    |
-   v
-safe-summon
-   |-- clean repo ----------> detached git worktree
-   \-- dirty or non-git ----> filtered filesystem copy
-                                |
-                                v
-                        worker command executes
-                                |
-                                +--> patch artifact
-                                +--> JSON log entry
-                                \--> human review / integration
+   +-- C (Parallel) -------> task-decomposer --> conflict-detector
+   |                              |
+   |                              v
+   |                         parallel-orchestrator
+   |                              |
+   |                    +---------+---------+
+   |                    |         |         |
+   |                 worker    worker    worker
+   |                 (Agent)   (Agent)  (safe-summon)
+   |                    |         |         |
+   |                    +---------+---------+
+   |                              |
+   |                              v
+   |                        merge-coordinator
+   |
+   +-- D (Serial complex) -> task-decomposer --> conflict-detector
+                                  |
+                                  v
+                             parallel-orchestrator (safe mode, serial execution)
+                                  |
+                                  v
+                             merge-coordinator
+```
+
+## Skill Pipeline
+
+Six skills form the orchestration pipeline:
+
+| Skill | Role | When Used |
+|-------|------|-----------|
+| `auto-router` | Classify request complexity | Every actionable request |
+| `task-decomposer` | Break request into DAG of workstreams | Class B, C, D |
+| `conflict-detector` | Analyze write-surface overlaps, form parallel groups | Class C, D |
+| `parallel-orchestrator` | Spawn and manage workers | Class C, D |
+| `merge-coordinator` | Validate and integrate worker outputs | After workers complete |
+| `safe-summon` (runner) | Isolated shell execution with timeout | Deterministic commands |
+
+## Classification System
+
+The `auto-router` classifies every request into one of four classes:
+
+- **Class A (Direct)**: questions, explanations -- answer immediately
+- **Class B (Single-agent)**: scoped changes to one concern -- plan and execute sequentially
+- **Class C (Parallel)**: multiple independent concerns -- full orchestration pipeline
+- **Class D (Serial complex)**: cross-cutting changes that cannot be parallelized -- plan, execute serially, validate between steps
+
+The default is always the lowest class that can handle the request. Over-orchestration wastes more tokens than under-orchestration.
+
+## Dual Execution Model
+
+### Agent Tool Workers
+
+Used for tasks requiring Claude's reasoning:
+- Implementation, test writing, refactoring, migration
+- Each worker runs in an isolated git worktree
+- Returns structured JSON (task_id, status, summary, files_modified, key_decisions)
+- Model tier assigned by task-decomposer (haiku/sonnet/opus)
+
+### safe-summon Shell Workers
+
+Used for deterministic commands:
+- Running tests, builds, lints, formatters
+- Creates isolated workspace (git worktree or filesystem copy)
+- Enforces hard timeout
+- Produces patch artifact and JSON log entry
+
+## Token Efficiency Layer
+
+Applied across all execution phases:
+
+1. **File discovery**: Glob -> Grep -> Read(offset, limit). Never read full files unless under 100 lines.
+2. **Summarize and discard**: extract what you need, compress, drop raw data.
+3. **Minimal worker prompts**: under 2000 tokens per subagent. Include only task, paths, context snippets.
+4. **Model tiering**: haiku for exploration, sonnet for implementation, opus for architecture.
+5. **Proactive compaction**: trigger `/compact` after each phase.
+
+See [docs/token-efficiency.md](./token-efficiency.md) for the complete protocol.
+
+## DAG-Based Decomposition
+
+The task-decomposer produces a structured DAG:
+
+```json
+{
+  "workstreams": [
+    {
+      "id": "a1b2c3d4",
+      "description": "...",
+      "goal": "...",
+      "likely_paths": ["..."],
+      "dependencies": [],
+      "complexity": 2,
+      "model": "sonnet",
+      "parallel_status": "parallel-ready"
+    }
+  ],
+  "execution_order": [["a1b2c3d4", "c9d0e1f2"], ["e5f6a7b8"]],
+  "total_complexity": 7,
+  "estimated_workers": 3
+}
+```
+
+Each workstream gets a deterministic ID (first 8 chars of SHA-256 hash). Dependencies form edges in the DAG. Execution order groups workstreams into parallel batches.
+
+## Conflict Detection and Parallel Groups
+
+The conflict-detector:
+1. Maps explicit and implicit write surfaces for each workstream
+2. Performs pairwise conflict analysis (none/low/medium/hard-blocker)
+3. Forms parallel groups: workstreams with no conflicts run concurrently
+4. Outputs an execution plan with groups, dependency order, and verdicts
+
+Verdicts: `fully-parallel`, `partial-parallel`, `fully-serial`, `needs-redesign`.
+
+## Merge Coordination
+
+After workers complete, the merge-coordinator:
+1. Collects all worker outputs (JSON from agents, patches from safe-summon)
+2. Validates each worker stayed within its assigned scope
+3. Detects emergent conflicts (import mismatches, type changes)
+4. Applies changes in dependency order with validation between steps
+5. Produces a compact summary for human review
+
+## Safety Layers
+
+All v1 safety guarantees are preserved and extended:
+
+- Timeout enforcement (fail-closed)
+- Dirty-repo protection (auto-fallback to copy mode)
+- Workspace isolation (worktrees for agents, temp dirs for safe-summon)
+- Unique patch artifacts (timestamp + slug + UUID)
+- Secret scanning on patch output
+- Locked JSON log writes
+- Human review before merge
+- **New**: scope validation (workers must stay within assigned files)
+- **New**: adaptive execution modes (safe vs fast)
+- **New**: worker count caps (4 agents, 6 shell workers max)
+- **New**: self-reflection for continuous improvement
+
+## Adaptive Execution
+
+The orchestrator dynamically selects:
+
+- **Safe mode**: sequential groups with validation between each. Default for Class D or any conflicts.
+- **Fast mode**: maximum parallelism with post-hoc validation. For Class C with zero conflicts.
+
+Model tier, worker count, and timeout values are all adjusted based on workstream complexity scores.
+
+## Observability
+
+Minimal structured progress reporting:
+
+```
+Classification: C (parallel-orchestrate)
+[group 1] Spawning 2 workers: a1b2c3d4 (sonnet), c9d0e1f2 (haiku)
+[group 1] Complete: 2/2 success
+[group 2] Spawning 1 worker: e5f6a7b8 (sonnet)
+[group 2] Complete: 1/1 success
+Merge: 5 files changed, 0 conflicts. Summary ready for review.
 ```
 
 ## Notes on Scope
 
-- The plugin provides planning skills plus a safe execution runner.
-- It does not ship a queue, remote worker fleet, or automatic merge system.
-- The quality of the outcome still depends on sensible workstream boundaries and human review.
+- The plugin provides classification, planning, orchestration, and merge coordination.
+- It does not ship a queue, remote worker fleet, or automatic integration system.
+- The quality of the outcome depends on sensible workstream boundaries and human review.
+- Token efficiency is a design principle, not a guarantee -- complex tasks still require context.
