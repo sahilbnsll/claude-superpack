@@ -98,20 +98,51 @@ More detail: [docs/architecture.md](./docs/architecture.md)
 
 ## Installation
 
-### Local source install
+### npm install (via GitHub Packages)
+
+The recommended way to install. Requires Node.js 18+.
+
+1. Create a `.npmrc` in your home directory (or project root) to tell npm where to find the package:
 
 ```bash
-mkdir -p ~/.claude/plugins
-git clone https://github.com/sahilbnsll/claude-superpack ~/.claude/plugins/claude-superpack
+echo "@sahilbnsll:registry=https://npm.pkg.github.com" >> ~/.npmrc
 ```
 
-### Marketplace install
-
-If this plugin is published through a Claude Code marketplace catalog:
+2. Install globally:
 
 ```bash
-/plugin marketplace add sahilbnsll/your-marketplace-repo
-/plugin install claude-superpack@your-marketplace-repo
+npm install -g @sahilbnsll/claude-superpack
+```
+
+The postinstall script automatically copies all skills into `~/.claude/skills/claude-superpack`. They are available in your next Claude Code session.
+
+### Git clone (alternative)
+
+If you prefer not to use npm:
+
+```bash
+git clone https://github.com/sahilbnsll/claude-superpack ~/.claude/skills/claude-superpack
+```
+
+### Uninstall
+
+```bash
+# npm
+npm uninstall -g @sahilbnsll/claude-superpack
+
+# git clone
+rm -rf ~/.claude/skills/claude-superpack
+```
+
+### CLI
+
+If installed via npm, a `claude-superpack` CLI is available:
+
+```bash
+claude-superpack status      # Check installation status
+claude-superpack install     # Reinstall skills
+claude-superpack uninstall   # Remove skills
+claude-superpack version     # Show version
 ```
 
 ### Runtime requirements
@@ -188,8 +219,17 @@ Full protocol: [docs/token-efficiency.md](./docs/token-efficiency.md)
 claude-superpack/
 ├── .claude-plugin/
 │   └── plugin.json
+├── .github/
+│   └── workflows/
+│       └── publish.yml
+├── .npmrc
+├── package.json
 ├── LICENSE
 ├── README.md
+├── scripts/
+│   ├── cli.js
+│   ├── install.js
+│   └── uninstall.js
 ├── docs/
 │   ├── architecture.md
 │   ├── token-efficiency.md

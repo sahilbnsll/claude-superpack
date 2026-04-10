@@ -1,0 +1,41 @@
+{
+  "name": "@sahilbnsll/claude-superpack",
+  "version": "2.0.0",
+  "description": "Token-efficient multi-agent orchestration for Claude Code with auto-classification, parallel subagent execution, conflict-aware routing, and structured merge coordination.",
+  "author": "Sahil Bansal <https://github.com/sahilbnsll>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sahilbnsll/claude-superpack.git"
+  },
+  "homepage": "https://github.com/sahilbnsll/claude-superpack",
+  "keywords": [
+    "claude-code",
+    "claude-skill",
+    "plugin",
+    "multi-agent",
+    "orchestration",
+    "parallel-execution",
+    "token-optimization"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "files": [
+    "skills/",
+    "bin/",
+    "docs/",
+    "examples/",
+    ".claude-plugin/",
+    "LICENSE",
+    "README.md",
+    "scripts/"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/install.js",
+    "preuninstall": "node scripts/uninstall.js"
+  },
+  "bin": {
+    "claude-superpack": "./scripts/cli.js"
+  }
+}
