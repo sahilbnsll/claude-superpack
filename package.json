@@ -1,7 +1,7 @@
 {
   "name": "@sahilbnsll/claude-superpack",
-  "version": "3.0.0",
-  "description": "22-skill agentic system for Claude Code: multi-agent orchestration, persistent memory, codebase knowledge graph, token optimization, workflow automation, and self-improving learning — all zero-dependency.",
+  "version": "4.0.0",
+  "description": "33-skill agentic system for Claude Code: multi-agent orchestration, persistent memory, codebase knowledge graph, security scanning, token optimization, workflow automation, and self-improving learning — all zero-dependency.",
   "author": "Sahil Bansal <https://github.com/sahilbnsll>",
   "license": "MIT",
   "repository": {

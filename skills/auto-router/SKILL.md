@@ -1,7 +1,7 @@
 ---
 name: auto-router
 description: This skill should be used when the user submits any implementation request, code change, refactoring, feature addition, bug fix, migration, or multi-step task. It classifies request complexity and routes to the appropriate workflow. Do not use for simple questions, explanations, or information retrieval that require no code changes.
-version: 2.0.0
+version: 4.0.0
 ---
 
 # Auto Router

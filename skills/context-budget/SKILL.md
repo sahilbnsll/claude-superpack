@@ -1,7 +1,7 @@
 ---
 name: context-budget
 description: This skill should be used throughout every session to track estimated token usage, warn when context is getting heavy, suggest compaction points, and ensure efficient use of the context window. It activates automatically and runs in the background.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Context Budget

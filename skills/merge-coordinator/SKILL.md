@@ -1,7 +1,7 @@
 ---
 name: merge-coordinator
 description: This skill should be used after parallel or serial worker execution completes, when the user asks to "merge worker results", "combine agent outputs", "validate parallel execution", "integrate workstream changes", or when multiple workers have produced outputs that need to be combined into the source tree.
-version: 2.0.0
+version: 4.0.0
 ---
 
 # Merge Coordinator

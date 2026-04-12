@@ -1,7 +1,7 @@
 ---
 name: memory-manager
 description: This skill should be used at the start of every session to load persistent memory, during work to record key decisions and facts, and at session end to prune stale entries. It manages the lifecycle of recent-memory, long-term-memory, and project-memory files. Activate automatically on every session.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Memory Manager

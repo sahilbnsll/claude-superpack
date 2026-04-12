@@ -1,7 +1,7 @@
 ---
 name: graph-updater
 description: This skill should be used after any file modification in the current project, when the user runs "update the graph", or when graph-meta.json indicates stale data. It incrementally updates the codebase graph without requiring a full rebuild.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Graph Updater

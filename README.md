@@ -1,10 +1,10 @@
 # Claude Superpack
 
-**22-skill agentic system for Claude Code.** Orchestration + persistent memory + codebase knowledge graph + token optimization + workflow automation + self-improving learning — all zero-dependency.
+**33-skill agentic system for Claude Code.** Orchestration + persistent memory + codebase knowledge graph + security + testing + documentation + token optimization + workflow automation + self-improving learning — all zero-dependency.
 
 ## What It Does
 
-Claude Superpack transforms Claude Code from a single-shot assistant into a **persistent, self-improving agent** that remembers across sessions, maps your codebase structurally, learns from its mistakes, and orchestrates complex tasks across parallel workers.
+Claude Superpack transforms Claude Code from a single-shot assistant into a **persistent, self-improving agent** that remembers across sessions, maps your codebase structurally, scans for security issues, generates tests and docs, learns from its mistakes, and orchestrates complex tasks across parallel workers.
 
 ### Quick Examples
 
@@ -34,6 +34,14 @@ Memory Search: 2 results
   [decision] 2026-04-06: Added multi-provider AI failover
 ```
 
+**Security scan** — catches issues before commit:
+```text
+> Commit these changes
+
+Security Scan: 1 critical (hardcoded API key in src/lib/api.ts:23)
+Fix: Move to environment variable
+```
+
 **Blast radius** — reads only what matters:
 ```text
 > Review the changes to src/auth.ts
@@ -44,15 +52,16 @@ Token savings: ~87%
 
 ---
 
-## Skills (22)
+## Skills (33)
 
-### 🎯 Orchestration (5 skills)
+### 🎯 Orchestration (6 skills)
 
-The original core — intelligent task routing and parallel execution.
+Intelligent task routing, clarification, and parallel execution.
 
 | Skill | Purpose |
 |---|---|
 | **auto-router** | Classifies requests A/B/C/D, routes to simplest sufficient workflow |
+| **clarifier** | Asks targeted clarifying questions before starting ambiguous work |
 | **task-decomposer** | Breaks complex requests into DAGs with IDs, dependencies, model tiers |
 | **conflict-detector** | Maps write surfaces, detects overlaps, forms parallel groups |
 | **parallel-orchestrator** | Spawns isolated workers via Agent tool or safe-summon |
@@ -71,7 +80,7 @@ Persistent context across sessions. No external databases — pure markdown.
 
 **Storage**: `~/.claude/memory/` (recent.md, long-term.md, projects/)
 
-### 🗺️ Knowledge Graph (4 skills)
+### 🗺️ Knowledge Graph (5 skills)
 
 Structural codebase mapping with zero external dependencies. No Tree-sitter, no SQLite, no pip install — works on first prompt.
 
@@ -81,8 +90,17 @@ Structural codebase mapping with zero external dependencies. No Tree-sitter, no 
 | **graph-reviewer** | Blast-radius-aware code review. Reads 80-90% fewer files |
 | **graph-navigator** | Answer architecture questions: deps, coupling, dead code, coverage |
 | **graph-updater** | Incremental hash-based updates. No full rebuilds needed |
+| **codebase-onboarder** | Generate architecture summaries for new contributors from graph data |
 
 **Storage**: `~/.claude/graphs/<project-slug>/` (graph.json, blast-cache.json, architecture.md)
+
+### 🔒 Security (1 skill)
+
+Catch vulnerabilities before they reach production.
+
+| Skill | Purpose |
+|---|---|
+| **security-scanner** | Scan for hardcoded secrets, injection risks, OWASP top 10 patterns — zero dependencies |
 
 ### 🔍 Token Efficiency (3 skills)
 
@@ -94,6 +112,16 @@ Make every token count.
 | **smart-discovery** | Intelligent file selection: gitignore-aware, recency-biased, graph-aware |
 | **skill-reuse-detector** | Check installed skills before implementing — stop reinventing wheels |
 
+### 🧪 Quality & Testing (3 skills)
+
+Targeted testing and dependency health.
+
+| Skill | Purpose |
+|---|---|
+| **test-mapper** | Map source files to test files, run only relevant tests per workstream |
+| **test-generator** | Auto-generate test stubs from function signatures, matching project patterns |
+| **dep-analyzer** | Track outdated/vulnerable dependencies, flag breaking upgrade risks |
+
 ### 🔄 Workflow (3 skills)
 
 Safety nets for orchestrated execution.
@@ -103,6 +131,32 @@ Safety nets for orchestrated execution.
 | **pre-flight** | Validate environment before workers: git, tools, deps, disk, memory, graph |
 | **post-review** | Auto-review after merge: scoped lint, typecheck, test subset |
 | **rollback** | Undo by workstream: selective, git-aware, always confirms before acting |
+
+### 📝 Documentation (2 skills)
+
+Keep docs in sync with code.
+
+| Skill | Purpose |
+|---|---|
+| **doc-generator** | Generate/update READMEs, API docs, JSDoc/docstrings from code changes |
+| **changelog-writer** | Generate structured changelogs from git history with breaking change detection |
+
+### 🔀 Migration & Maintenance (2 skills)
+
+Plan upgrades and keep the codebase clean.
+
+| Skill | Purpose |
+|---|---|
+| **migration-planner** | Plan framework/library upgrades with breaking change analysis and phased rollout |
+| **dead-code-finder** | Identify unused exports, orphan files, and stale imports via graph + grep analysis |
+
+### 💬 Communication (1 skill)
+
+Structured session management.
+
+| Skill | Purpose |
+|---|---|
+| **session-recap** | End-of-session summary: accomplishments, decisions, pending work, handoff context |
 
 ### 🎓 Learning (3 skills)
 
@@ -124,6 +178,7 @@ User request
    ▼
 auto-router (classify A/B/C/D)
    │
+   ├── clarifier ────────────── resolve ambiguity (if needed)
    ├── skill-reuse-detector ─── check existing skills
    ├── memory-manager ───────── load session context
    ├── context-budget ───────── track token usage
@@ -138,7 +193,7 @@ auto-router (classify A/B/C/D)
    │                │                                    │
    │                │                          merge-coordinator
    │                │                                    │
-   │                │                            post-review
+   │                │                       security-scanner + post-review
    │                │                                    │
    │                ▼                            pattern-tracker
    └── D ──▶ serial complex (same pipeline, sequential workers)
@@ -148,6 +203,7 @@ Background (always active):
   graph-updater ──▶ keep graph current
   user-profiler ──▶ learn preferences
   error-catalog ──▶ catalog errors + fixes
+  context-budget ──▶ track token usage
 ```
 
 ## Installation
@@ -169,16 +225,18 @@ npm install -g @sahilbnsll/claude-superpack
 ```
 
 The postinstall script:
-- Copies all 22 skills to `~/.claude/skills/claude-superpack`
+- Copies all 33 skills to `~/.claude/skills/claude-superpack`
+- Symlinks each skill into `~/.claude/skills/<name>` so Claude Code discovers them
 - Creates `~/.claude/memory/` directory structure
 - Initializes memory files (recent.md, long-term.md, index.json)
 
-Available in your next Claude Code session immediately.
+Skills are discoverable via `/` autocomplete in your next Claude Code session.
 
 ### Git clone (alternative)
 
 ```bash
 git clone https://github.com/sahilbnsll/claude-superpack ~/.claude/skills/claude-superpack
+cd ~/.claude/skills/claude-superpack && node scripts/install.js
 ```
 
 ### Uninstall
@@ -188,6 +246,8 @@ git clone https://github.com/sahilbnsll/claude-superpack ~/.claude/skills/claude
 npm uninstall -g @sahilbnsll/claude-superpack
 
 # git clone
+node ~/.claude/skills/claude-superpack/scripts/uninstall.js
+# or manually:
 rm -rf ~/.claude/skills/claude-superpack
 ```
 
@@ -195,7 +255,7 @@ rm -rf ~/.claude/skills/claude-superpack
 
 ```bash
 claude-superpack status               # Overall status
-claude-superpack skills               # List all 22 skills by category
+claude-superpack skills               # List all 33 skills by category
 claude-superpack memory               # Memory system stats
 claude-superpack memory consolidate   # Run memory consolidation
 claude-superpack graph                # Knowledge graph stats
@@ -221,7 +281,7 @@ Run memory consolidation nightly via cron:
 
 ## Token Efficiency
 
-Superpack v3 treats context as the most expensive resource:
+Superpack v4 treats context as the most expensive resource:
 
 - **Smart discovery**: gitignore-aware, recency-biased, graph-aware file selection
 - **Blast radius**: read only affected files during review (~87% fewer tokens)
@@ -234,6 +294,7 @@ Superpack v3 treats context as the most expensive resource:
 
 - Worker execution is time-bounded with timeout enforcement
 - Pre-flight validation before every orchestrated execution
+- Security scanning for secrets and injection vulnerabilities before commit
 - Post-review validation after every merge
 - Rollback with pre-rollback snapshots and always-confirm protocol
 - Patch output scanned for secret patterns
@@ -259,6 +320,7 @@ claude-superpack/
 ├── examples/
 └── skills/
     ├── auto-router/          # Orchestration
+    ├── clarifier/
     ├── task-decomposer/
     ├── conflict-detector/
     ├── parallel-orchestrator/
@@ -271,12 +333,22 @@ claude-superpack/
     ├── graph-reviewer/
     ├── graph-navigator/
     ├── graph-updater/
+    ├── codebase-onboarder/
+    ├── security-scanner/     # Security
     ├── context-budget/       # Token Efficiency
     ├── smart-discovery/
     ├── skill-reuse-detector/
+    ├── test-mapper/          # Quality & Testing
+    ├── test-generator/
+    ├── dep-analyzer/
     ├── pre-flight/           # Workflow
     ├── post-review/
     ├── rollback/
+    ├── doc-generator/        # Documentation
+    ├── changelog-writer/
+    ├── migration-planner/    # Migration & Maintenance
+    ├── dead-code-finder/
+    ├── session-recap/        # Communication
     ├── pattern-tracker/      # Learning
     ├── user-profiler/
     └── error-catalog/

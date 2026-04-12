@@ -1,7 +1,7 @@
 ---
 name: conflict-detector
 description: This skill should be used when the user asks to "avoid merge conflicts across agents", "check whether these workstreams can run in parallel", "split changes across agents safely", or whenever multiple planned workstreams may touch the same files, generated outputs, schemas, or tests. Also invoked automatically after task-decomposer produces a DAG.
-version: 2.0.0
+version: 4.0.0
 ---
 
 # Conflict Detector

@@ -123,15 +123,44 @@ function install() {
 
   console.log(`   ✅ memory/ directory ready`);
 
-  // Count installed skills
+  // Symlink each skill into ~/.claude/skills/<name> so Claude Code discovers them
   const skillsDir = path.join(targetDir, 'skills');
-  const skillCount = fs.existsSync(skillsDir)
-    ? fs.readdirSync(skillsDir).filter(d => 
-        fs.statSync(path.join(skillsDir, d)).isDirectory()
-      ).length
-    : 0;
+  const topLevelSkillsDir = path.join(os.homedir(), '.claude', 'skills');
+  let skillCount = 0;
 
-  console.log(`\n✨ Installed ${skillCount} skills to ${targetDir}`);
+  if (fs.existsSync(skillsDir)) {
+    const skillDirs = fs.readdirSync(skillsDir).filter(d =>
+      fs.statSync(path.join(skillsDir, d)).isDirectory()
+    );
+    skillCount = skillDirs.length;
+
+    for (const skill of skillDirs) {
+      const linkPath = path.join(topLevelSkillsDir, skill);
+      const skillPath = path.join(skillsDir, skill);
+
+      // Remove existing symlink; skip if it's a real directory (user's own version)
+      try {
+        const stat = fs.lstatSync(linkPath);
+        if (stat.isSymbolicLink()) {
+          fs.unlinkSync(linkPath);
+        } else if (stat.isDirectory()) {
+          continue;
+        }
+      } catch {
+        // Path doesn't exist — good, we can create the symlink
+      }
+
+      try {
+        fs.symlinkSync(skillPath, linkPath, 'dir');
+      } catch {
+        // Fallback: copy if symlink fails (e.g. cross-device)
+        copyRecursive(skillPath, linkPath);
+      }
+    }
+    console.log(`   ✅ ${skillCount} skills linked to ${topLevelSkillsDir}`);
+  }
+
+  console.log(`\n✨ Installed ${skillCount} skills from ${targetDir}`);
   console.log(`   Memory system ready at ${memoryDir}`);
   console.log(`   Skills are available in your next Claude Code session.\n`);
 }

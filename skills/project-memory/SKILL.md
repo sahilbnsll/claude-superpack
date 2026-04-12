@@ -1,7 +1,7 @@
 ---
 name: project-memory
 description: This skill should be used when starting work on a project for the first time, when the user asks about project architecture, tech stack, known issues, or active work, or when switching between projects. It maintains per-project state files that persist across sessions.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Project Memory

@@ -1,7 +1,7 @@
 ---
 name: memory-search
 description: This skill should be used when the user references past context ("remember when...", "we discussed...", "last time...", "what did we decide about..."), when context from past sessions would help the current task, or when looking up a previously encountered error or decision. It searches across all memory files.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Memory Search

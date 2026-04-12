@@ -1,7 +1,7 @@
 ---
 name: user-profiler
 description: This skill should be used to learn and apply user preferences for code style, framework choices, naming conventions, review depth, and communication style. It observes patterns in user behavior and applies learned preferences automatically. Always active in the background.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # User Profiler

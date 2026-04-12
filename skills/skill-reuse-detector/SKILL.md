@@ -1,7 +1,7 @@
 ---
 name: skill-reuse-detector
 description: This skill should be used before implementing any Class B, C, or D task. It checks whether an existing installed skill already handles part or all of the requested work, preventing unnecessary reimplementation and ensuring the full skill library is utilized.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Skill Reuse Detector

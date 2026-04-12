@@ -1,7 +1,7 @@
 ---
 name: rollback
 description: This skill should be used when orchestrated changes need to be undone, when the user says "undo that", "rollback", "revert the last change", "undo worker X", or when post-review detects critical failures that require reverting specific workstream outputs.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Rollback

@@ -1,6 +1,6 @@
 # Architecture
 
-Claude Superpack v2 is a token-efficient multi-agent orchestration system built as a native Claude Code plugin. It classifies requests, decomposes complex tasks into DAGs, detects conflicts, spawns isolated workers, and merges results.
+Claude Superpack v4 is a token-efficient multi-agent orchestration system built as a native Claude Code plugin. It classifies requests, resolves ambiguity, decomposes complex tasks into DAGs, detects conflicts, spawns isolated workers, scans for security issues, and merges results.
 
 ## System Overview
 
@@ -9,6 +9,8 @@ User request
    |
    v
 auto-router (classify A/B/C/D)
+   |
+   +-- clarifier (resolve ambiguity if detected)
    |
    +-- A (Direct) ---------> answer immediately, no skills
    |
@@ -28,6 +30,9 @@ auto-router (classify A/B/C/D)
    |                              |
    |                              v
    |                        merge-coordinator
+   |                              |
+   |                              v
+   |                   security-scanner + post-review
    |
    +-- D (Serial complex) -> task-decomposer --> conflict-detector
                                   |
@@ -36,20 +41,77 @@ auto-router (classify A/B/C/D)
                                   |
                                   v
                              merge-coordinator
+                                  |
+                                  v
+                        security-scanner + post-review
 ```
 
 ## Skill Pipeline
 
-Six skills form the orchestration pipeline:
+The core orchestration pipeline consists of 6 skills:
 
 | Skill | Role | When Used |
 |-------|------|-----------|
 | `auto-router` | Classify request complexity | Every actionable request |
+| `clarifier` | Resolve ambiguity before starting | When request has multiple valid interpretations |
 | `task-decomposer` | Break request into DAG of workstreams | Class B, C, D |
 | `conflict-detector` | Analyze write-surface overlaps, form parallel groups | Class C, D |
 | `parallel-orchestrator` | Spawn and manage workers | Class C, D |
 | `merge-coordinator` | Validate and integrate worker outputs | After workers complete |
 | `safe-summon` (runner) | Isolated shell execution with timeout | Deterministic commands |
+
+## Supporting Skills (27)
+
+Beyond the core pipeline, skills are organized into functional categories:
+
+### Memory (4 skills)
+Persistent context across sessions using markdown files:
+- `memory-manager`: session lifecycle (load, record, prune)
+- `project-memory`: per-project state and architecture
+- `memory-search`: query past context by keyword, tag, or time
+- `memory-consolidator`: distill patterns from recent to long-term
+
+### Knowledge Graph (5 skills)
+Zero-dependency structural mapping:
+- `graph-builder`: build structural map using Glob/Grep/Read
+- `graph-reviewer`: blast-radius-aware code review
+- `graph-navigator`: answer architecture and dependency questions
+- `graph-updater`: incremental hash-based updates
+- `codebase-onboarder`: generate architecture summaries for new contributors
+
+### Security (1 skill)
+- `security-scanner`: scan for secrets, injection risks, OWASP top 10 patterns
+
+### Token Efficiency (3 skills)
+- `context-budget`: running token usage estimates with compaction protocol
+- `smart-discovery`: intelligent, ranked file selection
+- `skill-reuse-detector`: check installed skills before reimplementing
+
+### Quality & Testing (3 skills)
+- `test-mapper`: map source files to their tests, run only what's relevant
+- `test-generator`: auto-generate test stubs from function signatures
+- `dep-analyzer`: track outdated/vulnerable dependencies
+
+### Workflow (3 skills)
+- `pre-flight`: validate environment before workers
+- `post-review`: auto-review after merge
+- `rollback`: selective undo by workstream
+
+### Documentation (2 skills)
+- `doc-generator`: generate/update docs from code changes
+- `changelog-writer`: structured changelogs from git history
+
+### Migration & Maintenance (2 skills)
+- `migration-planner`: plan framework/library upgrades with breaking change analysis
+- `dead-code-finder`: identify unused exports, orphan files, stale imports
+
+### Communication (1 skill)
+- `session-recap`: structured end-of-session summary for handoff
+
+### Learning (3 skills)
+- `pattern-tracker`: track classification decisions and outcomes
+- `user-profiler`: learn and apply user preferences
+- `error-catalog`: persistent error+fix database
 
 ## Classification System
 
@@ -139,7 +201,7 @@ After workers complete, the merge-coordinator:
 
 ## Safety Layers
 
-All v1 safety guarantees are preserved and extended:
+All prior safety guarantees are preserved and extended:
 
 - Timeout enforcement (fail-closed)
 - Dirty-repo protection (auto-fallback to copy mode)
@@ -148,10 +210,10 @@ All v1 safety guarantees are preserved and extended:
 - Secret scanning on patch output
 - Locked JSON log writes
 - Human review before merge
-- **New**: scope validation (workers must stay within assigned files)
-- **New**: adaptive execution modes (safe vs fast)
-- **New**: worker count caps (4 agents, 6 shell workers max)
-- **New**: self-reflection for continuous improvement
+- Scope validation (workers must stay within assigned files)
+- Security scanning before commit (secrets, injection, OWASP patterns)
+- Adaptive execution modes (safe vs fast)
+- Worker count caps (4 agents, 6 shell workers max)
 
 ## Adaptive Execution
 
@@ -172,12 +234,13 @@ Classification: C (parallel-orchestrate)
 [group 1] Complete: 2/2 success
 [group 2] Spawning 1 worker: e5f6a7b8 (sonnet)
 [group 2] Complete: 1/1 success
+Security: 0 critical, 0 high
 Merge: 5 files changed, 0 conflicts. Summary ready for review.
 ```
 
 ## Notes on Scope
 
-- The plugin provides classification, planning, orchestration, and merge coordination.
+- The plugin provides classification, planning, orchestration, security scanning, and merge coordination.
 - It does not ship a queue, remote worker fleet, or automatic integration system.
 - The quality of the outcome depends on sensible workstream boundaries and human review.
 - Token efficiency is a design principle, not a guarantee -- complex tasks still require context.

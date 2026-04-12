@@ -1,6 +1,6 @@
 # Usage
 
-Claude Superpack v2 automatically classifies every request and routes it to the appropriate workflow. You do not need to invoke skills manually -- the auto-router handles this.
+Claude Superpack v4 automatically classifies every request and routes it to the appropriate workflow. You do not need to invoke skills manually -- the auto-router handles this.
 
 ## Class A -- Direct Response
 
@@ -20,6 +20,23 @@ $ claude
 
 - Same: direct answer.
 - Superpack stays completely out of the way.
+
+## Ambiguous Requests -- Clarifier
+
+```text
+$ claude
+> Fix the auth
+```
+
+- Auto-router detects ambiguity (which auth file? what's broken?).
+- Clarifier activates and presents options:
+  ```
+  "Fix the auth" could mean several things:
+    a) Fix the validateToken null check (bug on line 42)
+    b) Fix the session expiry logic (tests failing)
+    c) Something else?
+  ```
+- After user responds, proceeds with the appropriate class.
 
 ## Class B -- Single-Agent Execution
 
@@ -56,6 +73,7 @@ $ claude
 - Conflict-detector finds: readme is independent, tests depend on fix.
 - Execution plan: group 1 = [fix, readme] in parallel; group 2 = [tests] after fix.
 - Workers spawn in isolated worktrees.
+- Security-scanner checks merged output.
 - Merge-coordinator collects, validates, and summarizes.
 
 ```text
@@ -64,7 +82,7 @@ $ claude
 ```
 
 - Class C: multiple concerns with separable write surfaces.
-- Full pipeline: decompose -> detect conflicts -> orchestrate -> merge.
+- Full pipeline: decompose -> detect conflicts -> orchestrate -> security scan -> merge.
 
 ## Class D -- Serial Complex Execution
 
@@ -74,6 +92,7 @@ $ claude
 ```
 
 - Auto-router classifies as **Class D** (cross-cutting, high coupling).
+- Migration-planner analyzes breaking changes and creates phased plan.
 - Task-decomposer creates ordered workstreams (each depends on the previous).
 - Conflict-detector recommends full serialization.
 - Execution: one workstream at a time, validation between each.
@@ -96,6 +115,54 @@ Supported modes:
 - `git`: require a clean committed git repository
 - `copy`: always use filtered filesystem copy
 
+## Security Scanning
+
+Security-scanner runs automatically:
+- Before commits (staged files)
+- After merge-coordinator integrates changes
+- On demand when the user asks
+
+Catches: hardcoded secrets, SQL/command injection, XSS, CORS misconfiguration, and other OWASP top 10 patterns.
+
+## Test Workflows
+
+Test-mapper and test-generator work together:
+- **test-mapper**: identifies which tests cover changed files, runs only those
+- **test-generator**: creates test stubs for untested functions, matching project patterns
+
+```text
+$ claude
+> Add tests for the auth module
+
+Test Mapper: 4 test files cover auth (vs 47 total)
+Test Generator: 3 functions need tests — generating stubs...
+```
+
+## Documentation Generation
+
+```text
+$ claude
+> Document the API routes
+
+Doc Generator: 12 endpoints found
+  - 8 already documented (current)
+  - 3 need updates (signatures changed)
+  - 1 undocumented (new endpoint)
+```
+
+## Session Wrap-Up
+
+```text
+$ claude
+> Wrap up
+
+Session Recap — 2026-04-12
+  Accomplished: Fixed auth bug, added 3 tests, updated README
+  Commits: 3
+  Files changed: 7
+  Pending: Dashboard refactor (deferred to next session)
+```
+
 ## Expected Artifacts
 
 ### From Agent-tool workers:
@@ -109,15 +176,22 @@ Supported modes:
 ### From merge-coordinator:
 - Compact merge summary with files changed, decisions made, and validation results
 
+### From security-scanner:
+- Severity-ranked report (critical/high/medium/low)
+
+### From session-recap:
+- Structured summary with accomplishments, decisions, and pending work
+
 ## Token Efficiency in Practice
 
-Superpack v2 aggressively minimizes token usage:
+Superpack v4 aggressively minimizes token usage:
 
 - **Before reading**: Glob -> Grep -> Read(offset, limit). Never read full files over 100 lines.
 - **Worker prompts**: under 2000 tokens. Only task, paths, and minimal context.
 - **Model selection**: haiku for mechanical work, sonnet for implementation, opus only for architecture.
 - **Compaction**: `/compact` after each phase to keep context lean.
 - **Output**: structured JSON and diffs, never full file dumps.
+- **Test scoping**: run only relevant tests, not the full suite.
 
 ## Operational Notes
 
@@ -126,3 +200,4 @@ Superpack v2 aggressively minimizes token usage:
 - Review the merge-coordinator summary before integrating results.
 - Worker count is capped at 4 agents / 6 shell workers for stability.
 - The auto-router defaults to the simplest workflow that can handle the request.
+- Security scanner findings at critical/high severity block commit by default.

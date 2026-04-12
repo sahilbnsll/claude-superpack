@@ -1,7 +1,7 @@
 ---
 name: graph-builder
 description: This skill should be used when first interacting with a new project, when the user asks to "map this codebase", "build a graph", "analyze project structure", or when any graph-dependent skill (graph-reviewer, graph-navigator) needs data that doesn't exist yet. It builds a structural map of the codebase using only Claude's built-in tools — no external dependencies required.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Graph Builder

@@ -1,7 +1,7 @@
 ---
 name: post-review
 description: This skill should be used after merge-coordinator finishes integrating worker outputs, when the user asks to "verify the changes", "run a post-merge check", or after any significant code changes. It runs lightweight automated validation to catch issues before the user discovers them.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Post-Review

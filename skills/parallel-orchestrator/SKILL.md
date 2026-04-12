@@ -1,7 +1,7 @@
 ---
 name: parallel-orchestrator
 description: This skill should be used when the user asks to "run this safely in parallel", "orchestrate multiple workers", "use isolated worktrees", "coordinate low-conflict subagents", or when a decomposed task with a conflict-checked execution plan is ready for worker execution.
-version: 2.0.0
+version: 4.0.0
 ---
 
 # Parallel Orchestrator

@@ -21,6 +21,26 @@ function uninstall() {
     return;
   }
 
+  // Remove symlinks from ~/.claude/skills/ that point into the superpack
+  const skillsDir = path.join(targetDir, 'skills');
+  const topLevelSkillsDir = path.join(os.homedir(), '.claude', 'skills');
+  if (fs.existsSync(skillsDir)) {
+    for (const skill of fs.readdirSync(skillsDir)) {
+      const linkPath = path.join(topLevelSkillsDir, skill);
+      try {
+        const stat = fs.lstatSync(linkPath);
+        if (stat.isSymbolicLink()) {
+          const target = fs.readlinkSync(linkPath);
+          if (target.includes(SKILL_DIR_NAME)) {
+            fs.unlinkSync(linkPath);
+          }
+        }
+      } catch {
+        // Not found — already clean
+      }
+    }
+  }
+
   fs.rmSync(targetDir, { recursive: true, force: true });
   console.log(`\n🔌 Claude Superpack — Uninstalled from ${targetDir}`);
   console.log(`   Skills will no longer appear in Claude Code.\n`);

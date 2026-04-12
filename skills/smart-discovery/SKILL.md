@@ -1,7 +1,7 @@
 ---
 name: smart-discovery
 description: This skill should be used before reading any files for a task. It replaces naive Glob→Read workflows with intelligent, ranked file selection that is gitignore-aware, frequency-weighted, recency-biased, and graph-aware. Activate automatically when context gathering begins.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Smart Discovery

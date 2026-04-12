@@ -119,11 +119,16 @@ function skillsList() {
 
   // Group skills by category
   const categories = {
-    'Orchestration': ['auto-router', 'task-decomposer', 'conflict-detector', 'parallel-orchestrator', 'merge-coordinator'],
+    'Orchestration': ['auto-router', 'clarifier', 'task-decomposer', 'conflict-detector', 'parallel-orchestrator', 'merge-coordinator'],
     'Memory': ['memory-manager', 'project-memory', 'memory-search', 'memory-consolidator'],
-    'Knowledge Graph': ['graph-builder', 'graph-reviewer', 'graph-navigator', 'graph-updater'],
+    'Knowledge Graph': ['graph-builder', 'graph-reviewer', 'graph-navigator', 'graph-updater', 'codebase-onboarder'],
+    'Security': ['security-scanner'],
     'Token Efficiency': ['context-budget', 'smart-discovery', 'skill-reuse-detector'],
+    'Quality & Testing': ['test-mapper', 'test-generator', 'dep-analyzer'],
     'Workflow': ['pre-flight', 'post-review', 'rollback'],
+    'Documentation': ['doc-generator', 'changelog-writer'],
+    'Migration & Maintenance': ['migration-planner', 'dead-code-finder'],
+    'Communication': ['session-recap'],
     'Learning': ['pattern-tracker', 'user-profiler', 'error-catalog'],
   };
 

@@ -1,7 +1,7 @@
 ---
 name: pre-flight
 description: This skill should be used before any Class C or D orchestrated execution, before spawning workers, or when the user asks to "check if everything is ready", "validate environment", or "pre-flight check". It validates that the environment is ready for safe execution.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Pre-Flight

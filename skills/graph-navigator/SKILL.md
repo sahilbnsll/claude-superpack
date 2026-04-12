@@ -1,7 +1,7 @@
 ---
 name: graph-navigator
 description: This skill should be used when the user asks architecture questions ("what depends on X?", "show me the import chain", "which files have no tests?", "what's the most coupled module?"), when exploring unfamiliar codebases, or when planning refactors that need structural understanding.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Graph Navigator

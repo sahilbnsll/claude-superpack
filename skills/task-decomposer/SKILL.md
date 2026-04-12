@@ -1,7 +1,7 @@
 ---
 name: task-decomposer
 description: This skill should be used when the user asks to "split this into workstreams", "break this task into phases", "plan multiple independent changes", "decompose a complex implementation request", or when a request clearly contains two or more distinct outcomes that may be executed separately. Also invoked by the auto-router for Class B, C, and D requests.
-version: 2.0.0
+version: 4.0.0
 ---
 
 # Task Decomposer

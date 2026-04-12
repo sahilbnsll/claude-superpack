@@ -1,7 +1,7 @@
 ---
 name: error-catalog
 description: This skill should be used when an error is encountered during development, when the user asks about a recurring error, or when debugging an issue that might have been seen before. It maintains a catalog of errors and their fixes, providing instant lookups for known problems.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Error Catalog

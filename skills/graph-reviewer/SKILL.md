@@ -1,7 +1,7 @@
 ---
 name: graph-reviewer
 description: This skill should be used before reviewing code changes, when the user asks to "review this PR", "check these changes", "what's the blast radius", or when merge-coordinator needs to validate worker scope. It uses the codebase graph to identify exactly which files need review based on what changed — dramatically reducing token usage.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Graph Reviewer

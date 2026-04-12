@@ -1,7 +1,7 @@
 ---
 name: pattern-tracker
 description: This skill should be used after every completed task to record the classification decision, execution path, and outcome. It tracks which patterns lead to success and which lead to failure, feeding data back to auto-router for improved routing decisions over time.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Pattern Tracker

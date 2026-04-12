@@ -1,7 +1,7 @@
 ---
 name: memory-consolidator
 description: This skill should be used when the user asks to "consolidate memory", "clean up memory", "promote recent to long-term", or when recent memory exceeds 200 lines. It distills patterns from recent memory and promotes important entries to long-term memory.
-version: 3.0.0
+version: 4.0.0
 ---
 
 # Memory Consolidator

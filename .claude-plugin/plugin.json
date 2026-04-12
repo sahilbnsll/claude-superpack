@@ -1,7 +1,7 @@
 {
   "name": "claude-superpack",
-  "version": "3.0.0",
-  "description": "22-skill agentic system for Claude Code: orchestration, persistent memory, codebase knowledge graph, token optimization, workflow automation, and self-improving learning.",
+  "version": "4.0.0",
+  "description": "33-skill agentic system for Claude Code: orchestration, persistent memory, codebase knowledge graph, security scanning, token optimization, workflow automation, and self-improving learning.",
   "author": {
     "name": "Sahil Bansal",
     "url": "https://github.com/sahilbnsll"
@@ -27,8 +27,8 @@
   ],
   "interface": {
     "displayName": "Claude Superpack",
-    "shortDescription": "22-skill agentic system: orchestration + memory + knowledge graph + learning.",
-    "longDescription": "Claude Superpack v3 transforms Claude Code into a self-improving agentic system with 22 skills across 6 categories. ORCHESTRATION: auto-classify requests (A/B/C/D), decompose into DAGs, detect conflicts, spawn isolated workers, merge results. MEMORY: persistent context across sessions — recent (48h rolling), long-term (distilled patterns), and per-project state. KNOWLEDGE GRAPH: zero-dependency structural mapping of any codebase using only Glob/Grep/Read, with blast-radius-aware code review that reads 80-90% fewer files. TOKEN EFFICIENCY: budget tracking, smart file discovery, skill reuse detection. WORKFLOW: pre-flight checks, post-execution review, git-aware rollback. LEARNING: pattern tracking, user preference profiling, and a persistent error+fix catalog.",
+    "shortDescription": "33-skill agentic system: orchestration + memory + knowledge graph + security + testing + learning.",
+    "longDescription": "Claude Superpack v4 transforms Claude Code into a self-improving agentic system with 33 skills across 11 categories. ORCHESTRATION: auto-classify requests (A/B/C/D), decompose into DAGs, detect conflicts, spawn isolated workers, merge results. MEMORY: persistent context across sessions — recent (48h rolling), long-term (distilled patterns), and per-project state. KNOWLEDGE GRAPH: zero-dependency structural mapping of any codebase using only Glob/Grep/Read, with blast-radius-aware code review that reads 80-90% fewer files. TOKEN EFFICIENCY: budget tracking, smart file discovery, skill reuse detection. SECURITY: secret detection, injection scanning, OWASP risk checks. QUALITY & TESTING: test mapping, test generation, dependency analysis. WORKFLOW: pre-flight checks, post-execution review, git-aware rollback. DOCUMENTATION: auto-generated docs, changelogs. COMMUNICATION: clarifying questions, session recaps. ONBOARDING: codebase architecture summaries, migration planning. LEARNING: pattern tracking, user preference profiling, dead code detection, and a persistent error+fix catalog.",
     "developerName": "Sahil Bansal",
     "category": "Productivity",
     "capabilities": [
@@ -40,6 +40,13 @@
       "Persistent memory",
       "Codebase knowledge graph",
       "Blast radius analysis",
+      "Security scanning",
+      "Test mapping and generation",
+      "Dependency analysis",
+      "Documentation generation",
+      "Migration planning",
+      "Dead code detection",
+      "Codebase onboarding",
       "Pattern learning",
       "Error cataloging"
     ],
