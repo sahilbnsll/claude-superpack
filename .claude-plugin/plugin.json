@@ -1,6 +1,6 @@
 {
   "name": "claude-superpack",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "An engineering operating system for Claude Code: risk-tiered workflows, on-demand domain references, deterministic scripts, and an evidence gate before any completion claim.",
   "author": {
     "name": "Sahil Bansal",

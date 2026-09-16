@@ -35,9 +35,14 @@ const report = {
   verdict: tier1.ok && tier2.data?.reference_routing?.accuracy >= 0.9 ? 'pass' : 'fail',
 };
 
+// --no-write leaves the working tree untouched, so a publish packs exactly the committed
+// files and the tarball can be reproduced from its commit.
+const write = !process.argv.includes('--no-write');
 const outDir = join(ROOT, 'benchmarks', 'results');
-mkdirSync(outDir, { recursive: true });
-writeFileSync(join(outDir, 'latest.json'), `${JSON.stringify(report, null, 2)}\n`);
+if (write) {
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(join(outDir, 'latest.json'), `${JSON.stringify(report, null, 2)}\n`);
+}
 
 process.stdout.write('claude-superpack benchmarks\n');
 process.stdout.write('───────────────────────────\n');
@@ -51,6 +56,7 @@ if (footprint.data.delta) {
   process.stdout.write(`                   vs ${footprint.data.baseline.ref}: ${footprint.data.delta.always_on_tokens} tokens (${footprint.data.delta.always_on_change_pct}%)\n`);
 }
 process.stdout.write(`Tier 3 behaviour : not run (billed) — see benchmarks/tier3-behavior.md\n`);
-process.stdout.write(`\nVerdict: ${report.verdict}\nWrote benchmarks/results/latest.json\n`);
+process.stdout.write(`\nVerdict: ${report.verdict}\n`);
+if (write) process.stdout.write('Wrote benchmarks/results/latest.json\n');
 
 process.exit(report.verdict === 'pass' ? 0 : 1);

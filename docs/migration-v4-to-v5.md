@@ -16,9 +16,12 @@ node scripts/cli.js doctor
 Or via npm, with no login:
 
 ```bash
-npm install -g @sahilbnsll/claude-superpack
-claude-superpack doctor
+npx @sahilbnsll/claude-superpack install
+npx @sahilbnsll/claude-superpack doctor
 ```
+
+v4 installed itself through an npm postinstall script. v5 has no install scripts — current
+npm blocks them by default — so the explicit `install` step is required.
 
 If that fails with `E401`, an earlier GitHub Packages login is redirecting the scope —
 `npm config delete @sahilbnsll:registry` clears it. See [Install](../README.md#from-npm--recommended).

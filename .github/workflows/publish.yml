@@ -74,7 +74,12 @@ jobs:
         run: |
           NAME=$(node -p "require('./package.json').name")
           VERSION=$(node -p "require('./package.json').version")
-          if npm view "$NAME@$VERSION" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+          # Checked with an unauthenticated HTTP read rather than `npm view`: setup-node
+          # writes a placeholder token into .npmrc, which can turn a public read into a 401
+          # and make an existing version look absent.
+          ENCODED=$(node -p "encodeURIComponent(require('./package.json').name).replace('%40','@')")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/$ENCODED/$VERSION")
+          if [ "$STATUS" = "200" ]; then
             echo "::notice::$NAME@$VERSION is already on npmjs.com — skipping"
             exit 0
           fi

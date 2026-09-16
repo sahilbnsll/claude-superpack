@@ -8,6 +8,42 @@ deciding whether to upgrade — breaking changes first, with the migration step.
 
 ---
 
+## [5.0.2] — 2026-09-16
+
+### Breaking
+
+- **No install scripts.** `postinstall` and `preuninstall` are removed. Install the skills
+  explicitly:
+
+  ```bash
+  npx @sahilbnsll/claude-superpack install
+  ```
+
+  Why: current npm blocks package install scripts by default, so in 5.0.1
+  `npm install -g @sahilbnsll/claude-superpack` downloaded the package and **silently did not
+  install the skills** — the only sign was an `allow-scripts` warning. A package that writes
+  into your home directory merely by being downloaded is also a supply-chain smell.
+
+### Fixed
+
+- **Published tarballs are reproducible from their commit.** `prepublishOnly` ran the
+  benchmarks, which rewrote `benchmarks/results/latest.json` with a fresh timestamp — so every
+  publish packed different bytes than the commit and left the working tree dirty. It now runs
+  with `--no-write`.
+- **The npmjs.com skip check could misfire.** It used `npm view`, which can return 401 when
+  setup-node's placeholder token is present, making an existing version look absent. It now
+  uses an unauthenticated registry read.
+- `install` and `uninstall` exit non-zero on failure; as lifecycle scripts they had
+  deliberately swallowed errors.
+
+### Changed
+
+- README and docs lead with `npx`, which needs no global install and no PATH setup.
+- `docs/releasing.md` adds the prerequisite a new npm account hits first — publishing requires
+  2FA on the account — and the browser authentication prompt during `npm publish`.
+
+---
+
 ## [5.0.1] — 2026-09-16
 
 ### Added
@@ -229,6 +265,7 @@ Initial plugin scaffold (`f1e705e`, merged in `4801496`).
 
 ---
 
+[5.0.2]: https://github.com/sahilbnsll/claude-superpack/compare/v5.0.1...v5.0.2
 [5.0.1]: https://github.com/sahilbnsll/claude-superpack/compare/v5.0.0...v5.0.1
 [5.0.0]: https://github.com/sahilbnsll/claude-superpack/compare/superpack-v4...v5.0.0
 [4.0.0]: https://github.com/sahilbnsll/claude-superpack/compare/superpack-v2...superpack-v4

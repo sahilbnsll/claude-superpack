@@ -102,12 +102,17 @@ or a CI step. See [scripts.md](scripts.md).
 
 ## CLI
 
+Run it with `npx`, which needs no global install and no PATH setup:
+
 ```bash
-claude-superpack             # status and per-turn context cost
-claude-superpack skills      # what's installed, and the reference library
-claude-superpack doctor      # duplicate installs, stale v4 skills, total skill count
-claude-superpack bench       # the non-billed benchmark suite
+npx @sahilbnsll/claude-superpack             # status and per-turn context cost
+npx @sahilbnsll/claude-superpack skills      # what's installed, and the reference library
+npx @sahilbnsll/claude-superpack doctor      # duplicate installs, stale v4 skills, total skill count
+npx @sahilbnsll/claude-superpack uninstall   # remove the skills
 ```
+
+With a global install (`npm install -g @sahilbnsll/claude-superpack`), the same commands are
+available as `claude-superpack <command>`. `bench` runs the benchmark suite from a clone.
 
 `doctor` is worth running once after upgrading, and again if sessions start feeling heavy —
 it reports how many skill directories in total are competing for per-turn context, across

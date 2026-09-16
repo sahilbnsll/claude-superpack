@@ -20,7 +20,20 @@ All commands below work in bash and in Windows PowerShell. Run them one line at 
 npm only lets you configure a trusted publisher on a package that already exists. So the
 first version goes out by hand, once. Every release after that is automatic.
 
-### 1. Log in to npm on your machine
+### 1. Turn on two-factor authentication
+
+npm refuses publishes from accounts without 2FA:
+
+```
+E403 Forbidden - Two-factor authentication or granular access token with bypass 2fa
+enabled is required to publish packages.
+```
+
+The fix is 2FA on the account, **not** a bypass-2FA token — npm is restricting those. On
+npmjs.com: avatar → **Account** → **Two-Factor Authentication**, using an authenticator app
+or a security key, in the mode covering authorization and writes. Keep the recovery codes.
+
+### 2. Log in to npm on your machine
 
 ```bash
 npm login
@@ -36,20 +49,28 @@ npm whoami
 It must print `sahilbnsll`. If it prints anything else, stop — the `@sahilbnsll` scope
 belongs to that user or organisation, and the package name has to change first.
 
-### 2. Publish the first version by hand
+### 3. Publish the first version by hand
 
-From the repository root, on a clean checkout of the version being released:
+From the repository root, on a clean checkout of the version being released. Do a dry run
+first and check it says `Publishing to https://registry.npmjs.org/` — publishing is
+permanent, and a version number can never be reused:
 
 ```bash
 git status
+npm publish --dry-run --access public
 npm publish --access public
 ```
 
 `git status` should report nothing to commit. `prepublishOnly` runs the benchmark suite
-first and refuses to publish if it fails. `--access public` is required once: scoped
-packages default to private on npmjs.com.
+with `--no-write`, so it refuses to publish a failing pack and leaves the working tree
+untouched. `--access public` is required once: scoped packages default to private.
 
-### 3. Configure the trusted publisher
+npm prints an `Authenticate your account at:` link and waits — press Enter, approve in the
+browser, and it finishes with `+ @sahilbnsll/claude-superpack@X.Y.Z`. Running the same
+publish again fails with `You cannot publish over the previously published versions`; that
+is expected and harmless.
+
+### 4. Configure the trusted publisher
 
 On npmjs.com, open the package → **Settings** → **Trusted publishing** → **GitHub Actions**:
 
@@ -66,7 +87,7 @@ Then, on the same settings page, set **Publishing access** to require two-factor
 authentication and disallow tokens. Trusted publishing keeps working; a leaked token no
 longer can.
 
-### 4. Log out locally (optional)
+### 5. Log out locally (optional)
 
 ```bash
 npm logout

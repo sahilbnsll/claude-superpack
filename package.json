@@ -1,6 +1,6 @@
 {
   "name": "@sahilbnsll/claude-superpack",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "An engineering operating system for Claude Code: risk-tiered workflows, 15 on-demand domain references, deterministic recon/verification/risk scripts, and an evidence gate before any completion claim. Nine skills, ~750 tokens of always-on context.",
   "author": "Sahil Bansal <https://github.com/sahilbnsll>",
   "license": "MIT",
@@ -39,9 +39,7 @@
   "scripts": {
     "bench": "node benchmarks/run.mjs",
     "test": "node benchmarks/run.mjs",
-    "prepublishOnly": "node benchmarks/run.mjs",
-    "postinstall": "node scripts/install.js",
-    "preuninstall": "node scripts/uninstall.js"
+    "prepublishOnly": "node benchmarks/run.mjs --no-write"
   },
   "bin": {
     "claude-superpack": "scripts/cli.js"

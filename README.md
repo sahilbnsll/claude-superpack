@@ -11,10 +11,11 @@ Always-on context: **~742 tokens**, down from ~2,753 in v4 — Claude Code's own
 from `claude plugin details`.
 
 ```bash
-npm install -g @sahilbnsll/claude-superpack
+npx @sahilbnsll/claude-superpack install
 ```
 
-No login needed. As a plugin or from a clone instead: [Install](#install).
+No login, no global install, and it works whether or not your npm allows install scripts.
+As a plugin or from a clone instead: [Install](#install).
 
 ---
 
@@ -133,24 +134,39 @@ twice — `claude-superpack doctor` detects it.
 No login needed. Works in bash, zsh, and Windows PowerShell — run one line at a time:
 
 ```bash
-npm install -g @sahilbnsll/claude-superpack
-claude-superpack doctor
+npx @sahilbnsll/claude-superpack install
+npx @sahilbnsll/claude-superpack doctor
 ```
 
-Installs nine directories into `~/.claude/skills/` and puts the `claude-superpack` CLI on
-your PATH:
+Installs nine directories into `~/.claude/skills/`. The same command runs everything else:
 
 ```bash
-claude-superpack           # status and always-on context cost
-claude-superpack doctor    # duplicate installs, stale v4 skills
-claude-superpack bench     # the benchmark suite
+npx @sahilbnsll/claude-superpack            # status and always-on context cost
+npx @sahilbnsll/claude-superpack doctor     # duplicate installs, stale v4 skills
+npx @sahilbnsll/claude-superpack uninstall  # remove the skills
 ```
+
+**Why an explicit `install` step instead of `npm install -g`:** current npm blocks package
+install scripts by default, so a global install would download the package and silently not
+install the skills. A package that writes into your home directory merely by being
+downloaded is also a supply-chain smell. The pack has no install scripts at all.
+
+A global install is still fine if you want a shorter command, followed by the same explicit
+step:
+
+```bash
+npm install -g @sahilbnsll/claude-superpack
+claude-superpack install
+```
+
+If `claude-superpack` is then "not recognized", npm's global bin folder isn't on your PATH —
+`npm prefix -g` shows where it is. `npx` works either way.
 
 Published from GitHub Actions with [npm provenance](https://docs.npmjs.com/generating-provenance-statements),
 so each version is verifiably built from this repository:
 `npm view @sahilbnsll/claude-superpack dist.attestations`.
 
-If the install fails with `E401`, an earlier GitHub Packages login is redirecting the scope.
+If `npx` fails with `E401`, an earlier GitHub Packages login is redirecting the scope.
 `npm config delete @sahilbnsll:registry` clears it.
 
 ### As a plugin

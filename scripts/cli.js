@@ -58,7 +58,7 @@ function status() {
   console.log(`\nclaude-superpack v${pkg.version}\n`);
   if (!installed.length) {
     console.log('  not installed');
-    console.log('  run: claude-superpack install\n');
+    console.log('  run: npx @sahilbnsll/claude-superpack install\n');
     return;
   }
   const chars = installed.reduce((n, s) => {
@@ -68,8 +68,8 @@ function status() {
   console.log(`  installed   ${installed.length}/${SHIPPED.length} skills at ${SKILLS_DIR}`);
   console.log(`  per-turn    ~${Math.round(chars / 3.8)} tokens of always-on metadata`);
   const stale = RETIRED_V4.filter((s) => fs.existsSync(path.join(SKILLS_DIR, s)));
-  if (stale.length) console.log(`  warning     ${stale.length} superseded v4 skills still present — run: claude-superpack doctor`);
-  if (fs.existsSync(LEGACY_DIR)) console.log('  warning     duplicate install detected — run: claude-superpack doctor');
+  if (stale.length) console.log(`  warning     ${stale.length} superseded v4 skills still present — run: npx @sahilbnsll/claude-superpack doctor`);
+  if (fs.existsSync(LEGACY_DIR)) console.log('  warning     duplicate install detected — run: npx @sahilbnsll/claude-superpack doctor');
   console.log('\n  start with: /superpack\n');
 }
 
@@ -103,14 +103,14 @@ function doctor() {
   if (missing.length) {
     problems++;
     console.log(`  [!] ${missing.length} skills not installed: ${missing.join(', ')}`);
-    console.log('      fix: claude-superpack install');
+    console.log('      fix: npx @sahilbnsll/claude-superpack install');
   }
 
   if (fs.existsSync(LEGACY_DIR)) {
     problems++;
     console.log('  [!] duplicate install at ~/.claude/skills/claude-superpack/');
     console.log('      Claude Code discovers both copies, so every description is loaded twice per turn.');
-    console.log('      fix: claude-superpack install   (removes it)');
+    console.log('      fix: npx @sahilbnsll/claude-superpack install   (removes it)');
   }
 
   // Installed both as a plugin and as personal skills: Claude Code loads both, so every
@@ -123,7 +123,7 @@ function doctor() {
       problems++;
       console.log(`  [!] installed twice: as plugin ${asPlugin.join(', ')} and as ${asSkills.length} personal skills`);
       console.log('      Both load, so every description is paid twice. Keep one:');
-      console.log('      claude-superpack uninstall      (keeps the plugin)');
+      console.log('      npx @sahilbnsll/claude-superpack uninstall   (keeps the plugin)');
       console.log('      /plugin uninstall claude-superpack   (keeps the personal skills)');
     }
   } catch {
@@ -135,7 +135,7 @@ function doctor() {
     problems++;
     console.log(`  [!] ${stale.length} superseded v4 skills still installed`);
     console.log(`      ${stale.join(', ')}`);
-    console.log('      They still cost per-turn context. fix: claude-superpack install');
+    console.log('      They still cost per-turn context. fix: npx @sahilbnsll/claude-superpack install');
   }
 
   const other = fs.existsSync(SKILLS_DIR)

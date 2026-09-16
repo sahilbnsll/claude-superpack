@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * claude-superpack — postinstall
+ * claude-superpack install
+ *
+ * Run explicitly — `npx @sahilbnsll/claude-superpack install` or `claude-superpack install`.
+ * It is deliberately not an npm postinstall script: current npm blocks install scripts by
+ * default, so a postinstall would silently do nothing, and a package that writes into your
+ * home directory merely by being downloaded is a supply-chain smell.
  *
  * Installs each skill once, at `~/.claude/skills/<skill-name>/`.
  *
@@ -159,6 +164,5 @@ try {
 } catch (err) {
   console.error(`\nclaude-superpack: install step failed — ${err.message}`);
   console.error(`Copy the skills/ directory into ${SKILLS_DIR} manually to finish.\n`);
-  // A failed postinstall should not fail the package install.
-  process.exit(0);
+  process.exit(1);
 }

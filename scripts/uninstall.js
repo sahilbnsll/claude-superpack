@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * claude-superpack — preuninstall
+ * claude-superpack uninstall
+ *
+ * Run explicitly — `npx @sahilbnsll/claude-superpack uninstall`. Not an npm preuninstall
+ * script, for the same reasons install is not a postinstall.
  *
  * Removes only the skill directories this package installed, using the manifest written
  * at install time. Directories the user created or edited are left alone.
@@ -52,5 +55,5 @@ try {
 } catch (err) {
   console.error(`\nclaude-superpack: could not remove automatically — ${err.message}`);
   console.error(`Delete the skill directories under ${SKILLS_DIR} manually.\n`);
-  process.exit(0);
+  process.exit(1);
 }
