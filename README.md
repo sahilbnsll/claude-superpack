@@ -192,6 +192,10 @@ node scripts/cli.js doctor
 
 To remove: `node scripts/uninstall.js`.
 
+Inside a clone, use these `node scripts/...` commands rather than `npx`. npx sees that the
+folder *is* `@sahilbnsll/claude-superpack`, runs it in place instead of fetching from the
+registry, and fails with `'claude-superpack' is not recognized`.
+
 ### From GitHub Packages
 
 Also published there, but GitHub Packages requires authentication even for public packages,

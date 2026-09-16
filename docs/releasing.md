@@ -155,6 +155,14 @@ If that prints `https://npm.pkg.github.com`, remove it to install from npmjs.com
 npm config delete @sahilbnsll:registry
 ```
 
+**`'claude-superpack' is not recognized` from `npx`** — you ran it inside the repository.
+npx treats the folder as the package, runs it in place, and never contacts the registry. Run
+it from any other directory, or use `node scripts/cli.js` inside the clone.
+
+**`notarget` from `npx @sahilbnsll/claude-superpack@X.Y.Z`** — that version is not published
+yet. Pushing a tag does not publish; creating the GitHub release does. Check with
+`npm view @sahilbnsll/claude-superpack versions`.
+
 **`E404` from the `npmjs` job** — the trusted publisher is not configured, or its fields do
 not match exactly. The workflow filename is `publish.yml`, not the full path.
 
