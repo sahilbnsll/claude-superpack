@@ -7,11 +7,15 @@ zero-dependency scripts that replace guesswork with deterministic output. One ru
 overrides everything else: **no completion claim without evidence produced after the
 change**.
 
-Always-on cost: **~757 tokens per turn**, down from ~2,811 in v4.
+Always-on context: **~742 tokens**, down from ~2,753 in v4 — Claude Code's own estimate,
+from `claude plugin details`.
 
-```bash
-npm install -g @sahilbnsll/claude-superpack
 ```
+/plugin marketplace add sahilbnsll/claude-superpack
+/plugin install claude-superpack@claude-superpack
+```
+
+Other install methods, including from a clone with no registry auth: [Install](#install).
 
 ---
 
@@ -121,30 +125,68 @@ build output into a **288-byte** digest that preserved the evidence line.
 
 ## Install
 
-```bash
-npm install -g @sahilbnsll/claude-superpack
-claude-superpack status    # what's installed and what it costs per turn
-claude-superpack doctor    # duplicate installs, stale v4 skills
-claude-superpack bench     # run the benchmark suite
-```
+**Pick one method.** Installing as a plugin *and* as personal skills loads every description
+twice — `claude-superpack doctor` detects it.
 
-As a plugin instead:
+### As a plugin — recommended
+
+Inside Claude Code:
 
 ```
 /plugin marketplace add sahilbnsll/claude-superpack
-/plugin install claude-superpack
+/plugin install claude-superpack@claude-superpack
 ```
 
-Or clone and copy `skills/*` into `~/.claude/skills/` (personal) or `.claude/skills/`
-(project — also available in cloud sessions).
+Updates through the plugin manager, namespaced as `/claude-superpack:superpack`, no Node
+setup required for the skills themselves.
 
-**Upgrading from v4:** run `claude-superpack doctor`. v4 installed the skills twice — once
-at the top level and once as a plugin-shaped copy underneath — so every description was
-loaded twice on every turn. The v5 installer removes the duplicate and retires the 33
-superseded skills it installed. Directories you created yourself are never touched.
+### From a clone — no registry auth
+
+Works in bash, zsh, and Windows PowerShell alike:
+
+```bash
+git clone https://github.com/sahilbnsll/claude-superpack
+cd claude-superpack
+node scripts/install.js
+node scripts/cli.js doctor
+```
+
+Installs nine directories into `~/.claude/skills/`. To remove: `node scripts/uninstall.js`.
+
+### From npm (GitHub Packages)
+
+The package is published to GitHub Packages, which requires authentication **even to install
+a public package**. One-time setup, using a GitHub personal access token with the
+`read:packages` scope as the password:
+
+```bash
+npm login --scope=@sahilbnsll --auth-type=legacy --registry=https://npm.pkg.github.com
+```
+
+Then:
+
+```bash
+npm install -g @sahilbnsll/claude-superpack
+claude-superpack doctor
+```
+
+The npm install also puts the `claude-superpack` CLI on your PATH:
+
+```bash
+claude-superpack           # status and always-on context cost
+claude-superpack doctor    # duplicate installs, stale v4 skills
+claude-superpack bench     # the benchmark suite
+```
+
+### Upgrading from v4
+
+v4 installed the skills twice — once at the top level and once as a plugin-shaped copy
+underneath — so every description was loaded twice. Any of the methods above, followed by
+`doctor`, fixes it: the installer removes the duplicate and retires the 33 superseded
+skills, identifying each by its own frontmatter. Directories you created are never touched.
 [Details →](docs/migration-v4-to-v5.md)
 
-Requires Node 18+.
+Requires Node 18+ for the scripts and CLI.
 
 ---
 
@@ -157,6 +199,14 @@ Tier 2 routing   : references 100% (17/17), content skills 100% (7/7)
 Footprint        : 9 skills, 757 tokens/turn always-on
                    vs v4: 2811 → 757 tokens (-73.1%)
 Tier 3 behaviour : not run (billed) — harness in benchmarks/tier3-run.mjs
+```
+
+The footprint number is cross-checked against Claude Code's own estimator, which uses a
+different method and lands within 2%:
+
+```
+claude --plugin-dir . plugin details claude-superpack
+  Always-on:   ~742 tok    (v4, same command: ~2,753 tok)
 ```
 
 18 real-world tasks covering frontend, backend, migrations, Terraform, flaky tests,

@@ -50,10 +50,13 @@ superpack as a plugin rather than as personal skills sidesteps collisions entire
 
 The honest cost of any pack is not its size on disk but its always-on description budget.
 
-| | Skills | Always-on |
+| | Skills | Always-on (`claude plugin details`) |
 |---|---|---|
-| superpack v5 | 9 | ~757 tokens/turn |
-| superpack v4 | 33 | ~2,811, or ~5,621 with the double-install bug |
+| superpack v5 | 9 | ~742 tokens |
+| superpack v4 | 33 | ~2,753, roughly doubled by the v4 double-install bug |
+
+Installing v5 both as a plugin and as personal skills recreates that doubling;
+`claude-superpack doctor` flags it.
 
 Under auto-compaction Claude Code re-attaches only the most recent five skills within a
 25,000-token budget, so a large installed surface is not just expensive — it is unreliable.

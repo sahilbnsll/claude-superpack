@@ -35,6 +35,11 @@ references that load only when a task needs them.
 
 ### Fixed
 
+- **The plugin marketplace install path never worked.** The README documented
+  `/plugin marketplace add`, but the repository had no `.claude-plugin/marketplace.json`.
+  Added, and validated with `claude plugin validate`.
+- **npm install instructions omitted GitHub Packages authentication**, which is required
+  even for public packages. Documented, with a clone-based install that needs no auth.
 - **Skills were installed twice.** v4 copied each skill to `~/.claude/skills/<name>/` *and*
   left a plugin-shaped copy at `~/.claude/skills/claude-superpack/skills/<name>/`. Claude
   Code discovered both, so every description was loaded twice on every turn — roughly
@@ -81,15 +86,17 @@ references that load only when a task needs them.
 - **Explicit interoperation table.** The pack defers to `/code-review`, `/security-review`,
   `/simplify`, `frontend-design`, `webapp-testing`, `superpowers`, and memory plugins
   rather than duplicating them.
-- **`claude-superpack doctor`** — finds duplicate installs, stale v4 skills, and reports
-  how many skill directories are competing for per-turn context.
+- **`claude-superpack doctor`** — finds duplicate installs (including plugin-plus-skills),
+  stale v4 skills, and reports how many skill directories are competing for context.
 - **Rationalizations and Red flags tables** in every skill, rebutting the specific excuses
   that precede skipping a step.
 
 ### Changed
 
-- **Always-on context: ~2,811 → ~757 tokens per turn (−73%)**; against a v4 install with
-  the duplication bug, −86%. Measured by `node benchmarks/footprint.mjs --compare=<ref>`.
+- **Always-on context: ~2,753 → ~742 tokens (−73%)** by Claude Code's own estimator
+  (`claude plugin details`), and 2,811 → 757 by `node benchmarks/footprint.mjs
+  --compare=<ref>` — two methods agreeing within 2%. Against a v4 install with the
+  duplication bug, −86%.
 - **Context-budget tracking removed.** v4 asked the model to maintain a running token tally
   from a table of estimates. Self-reported bookkeeping does not survive real work, and
   `/context` reports the real number. Replaced by concrete context discipline and by

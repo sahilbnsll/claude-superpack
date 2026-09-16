@@ -1,0 +1,15 @@
+{
+  "name": "claude-superpack",
+  "description": "Risk-tiered engineering workflows for Claude Code, with on-demand domain references and evidence-gated completion.",
+  "owner": {
+    "name": "Sahil Bansal",
+    "url": "https://github.com/sahilbnsll"
+  },
+  "plugins": [
+    {
+      "name": "claude-superpack",
+      "source": "./",
+      "description": "An engineering operating system for Claude Code: risk-tiered workflows, on-demand domain references, deterministic scripts, and an evidence gate before any completion claim."
+    }
+  ]
+}

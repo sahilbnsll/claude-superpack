@@ -4,17 +4,25 @@ Every v4 skill name is gone. Nothing you need is gone.
 
 ## Do this
 
+From a clone of the repository — no registry authentication needed, and the same commands
+work in bash and Windows PowerShell:
+
 ```bash
-npm install -g @sahilbnsll/claude-superpack
-claude-superpack doctor
+git pull
+node scripts/install.js
+node scripts/cli.js doctor
 ```
 
-The installer removes the duplicate install v4 left behind and retires the 33 superseded
-skill directories — but only ones it installed itself. Anything you created or edited is
-left alone. `doctor` reports what is left.
+Or via npm, which for GitHub Packages needs a one-time `npm login` first — see
+[Install](../README.md#from-npm-github-packages).
 
-If you installed by cloning rather than by npm, delete the old skill directories from
-`~/.claude/skills/` by hand and copy the new `skills/*` in.
+The installer removes the duplicate install v4 left behind and retires the 33 superseded
+skill directories. It identifies each by its own frontmatter — a 1.x–4.x version and the v4
+description style — not by name alone, so a skill of yours that happens to be called
+`rollback` is left alone. `doctor` reports anything remaining.
+
+Do not also install the plugin. Plugin plus personal skills loads every description twice,
+which is the v4 bug again; `doctor` flags it.
 
 ## Where everything went
 

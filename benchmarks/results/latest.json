@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-16T06:20:36.165Z",
+  "generated": "2026-09-16T10:58:28.448Z",
   "node": "v24.19.0",
   "platform": "win32",
   "tier1": {
@@ -389,7 +389,20 @@
       "superpack: 479 chars",
       "shipping-safely: 350 chars",
       "securing-changes: 328 chars"
-    ]
+    ],
+    "baseline": {
+      "ref": "superpack-v4",
+      "skills": 33,
+      "always_on_chars": 10680,
+      "always_on_tokens": 2811,
+      "skill_bodies_chars": 167835
+    },
+    "delta": {
+      "skills": "33 → 9",
+      "always_on_tokens": "2811 → 757",
+      "always_on_change_pct": -73.1,
+      "note": "Negative percentages are reductions in per-turn cost."
+    }
   },
   "tier3": "Not run — requires billed live runs. Protocol: benchmarks/tier3-behavior.md, harness: benchmarks/tier3-run.mjs",
   "verdict": "pass"

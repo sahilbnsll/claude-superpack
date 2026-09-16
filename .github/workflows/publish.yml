@@ -27,16 +27,18 @@ jobs:
       - name: Verify before publishing
         run: node benchmarks/run.mjs
 
+      # Accepts v5.0.0, 5.0.0, and the repo's older major-only superpack-v5 convention.
+      # A major-only tag matches any version in that major; a full tag must match exactly.
       - name: Check the tag matches package.json
         if: github.event_name == 'release'
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
-          TAG="${TAG#superpack-v}"
+          TAG="${GITHUB_REF_NAME#superpack-}"
+          TAG="${TAG#v}"
           PKG=$(node -p "require('./package.json').version")
-          if [ "$TAG" != "$PKG" ]; then
-            echo "Release tag ($GITHUB_REF_NAME) does not match package.json version ($PKG)"
-            exit 1
-          fi
+          case "$PKG" in
+            "$TAG"|"$TAG".*) echo "tag $GITHUB_REF_NAME matches package version $PKG" ;;
+            *) echo "Release tag ($GITHUB_REF_NAME) does not match package.json version ($PKG)"; exit 1 ;;
+          esac
 
       - run: npm publish
         env:

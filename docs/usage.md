@@ -91,10 +91,10 @@ Each skill is user-invocable if you want it out of sequence:
 They are ordinary Node programs and work outside Claude entirely.
 
 ```bash
-node ~/.claude/skills/superpack/scripts/recon.mjs
-node ~/.claude/skills/superpack/scripts/gates.mjs --only lint,typecheck
-node ~/.claude/skills/superpack/scripts/diffstat.mjs --base main
-node ~/.claude/skills/superpack/scripts/secrets.mjs --staged
+node $HOME/.claude/skills/superpack/scripts/recon.mjs
+node $HOME/.claude/skills/superpack/scripts/gates.mjs --only lint,typecheck
+node $HOME/.claude/skills/superpack/scripts/diffstat.mjs --base main
+node $HOME/.claude/skills/superpack/scripts/secrets.mjs --staged
 ```
 
 `secrets.mjs` and `gates.mjs` exit non-zero on failure, so they work as a pre-commit hook

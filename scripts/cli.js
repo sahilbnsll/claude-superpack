@@ -113,6 +113,23 @@ function doctor() {
     console.log('      fix: claude-superpack install   (removes it)');
   }
 
+  // Installed both as a plugin and as personal skills: Claude Code loads both, so every
+  // description appears twice — the same cost v4's duplicate install caused.
+  try {
+    const registry = JSON.parse(fs.readFileSync(path.join(CLAUDE_DIR, 'plugins', 'installed_plugins.json'), 'utf8'));
+    const asPlugin = Object.keys(registry.plugins || {}).filter((k) => k.startsWith('claude-superpack@'));
+    const asSkills = SHIPPED.filter((s) => fs.existsSync(path.join(SKILLS_DIR, s, 'SKILL.md')));
+    if (asPlugin.length && asSkills.length) {
+      problems++;
+      console.log(`  [!] installed twice: as plugin ${asPlugin.join(', ')} and as ${asSkills.length} personal skills`);
+      console.log('      Both load, so every description is paid twice. Keep one:');
+      console.log('      claude-superpack uninstall      (keeps the plugin)');
+      console.log('      /plugin uninstall claude-superpack   (keeps the personal skills)');
+    }
+  } catch {
+    // No plugin registry: nothing installed as a plugin.
+  }
+
   const stale = RETIRED_V4.filter((s) => fs.existsSync(path.join(SKILLS_DIR, s)));
   if (stale.length) {
     problems++;
