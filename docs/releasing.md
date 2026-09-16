@@ -72,7 +72,8 @@ is expected and harmless.
 
 ### 4. Configure the trusted publisher
 
-On npmjs.com, open the package → **Settings** → **Trusted publishing** → **GitHub Actions**:
+On npmjs.com, open the package → **Settings**. Under **Trusted Publisher** the page says
+"Select your publisher" until one is configured. Click **GitHub Actions** and fill in:
 
 | Field | Value |
 |---|---|
@@ -81,11 +82,14 @@ On npmjs.com, open the package → **Settings** → **Trusted publishing** → *
 | Workflow filename | `publish.yml` |
 | Environment | leave empty |
 
-Allow `npm publish`.
+Allow `npm publish`, and save. Reload the page: GitHub Actions should now be listed as a
+configured publisher rather than offered as a button.
 
-Then, on the same settings page, set **Publishing access** to require two-factor
-authentication and disallow tokens. Trusted publishing keeps working; a leaked token no
-longer can.
+Then, on the same page under **Publishing access**, select **"Require two-factor
+authentication and disallow bypass 2fa tokens (recommended)"** and click **Update Package
+Settings**. The default for a new package is the weaker "…or a granular access token with
+bypass 2fa enabled". Trusted publishing works with either; the recommended option means a
+leaked token cannot publish.
 
 ### 5. Log out locally (optional)
 
