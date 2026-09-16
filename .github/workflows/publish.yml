@@ -1,4 +1,14 @@
-name: Publish to GitHub Packages
+name: Publish
+
+# Publishes to npmjs.com (no-auth installs for users) and GitHub Packages.
+#
+# npmjs.com uses trusted publishing: GitHub Actions proves its identity to npm via OIDC,
+# so no npm token is stored anywhere and provenance attestations are generated
+# automatically. npm only allows configuring a trusted publisher on a package that already
+# exists, so the very first version is published once by hand — see docs/releasing.md.
+#
+# Each registry is its own job, so a failure on one never blocks the other, and each job
+# skips a version that is already published, so re-running a release is always safe.
 
 on:
   release:
@@ -7,10 +17,9 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,17 +28,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@sahilbnsll'
+          node-version: '24'
 
       # Never publish a pack that fails its own benchmarks.
-      - name: Verify before publishing
+      - name: Benchmarks
         run: node benchmarks/run.mjs
 
-      # Accepts v5.0.0, 5.0.0, and the repo's older major-only superpack-v5 convention.
-      # A major-only tag matches any version in that major; a full tag must match exactly.
-      - name: Check the tag matches package.json
+      # Accepts v5.0.1, 5.0.1, and the repo's older major-only superpack-vN convention.
+      - name: Tag matches package.json
         if: github.event_name == 'release'
         run: |
           TAG="${GITHUB_REF_NAME#superpack-}"
@@ -37,9 +43,69 @@ jobs:
           PKG=$(node -p "require('./package.json').version")
           case "$PKG" in
             "$TAG"|"$TAG".*) echo "tag $GITHUB_REF_NAME matches package version $PKG" ;;
-            *) echo "Release tag ($GITHUB_REF_NAME) does not match package.json version ($PKG)"; exit 1 ;;
+            *) echo "::error::Release tag $GITHUB_REF_NAME does not match package.json version $PKG"; exit 1 ;;
           esac
 
-      - run: npm publish
+  npmjs:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC for npm trusted publishing
+    steps:
+      - uses: actions/checkout@v4
+
+      # Trusted publishing requires Node >= 22.14 and npm >= 11.5.1.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Ensure npm supports trusted publishing
+        run: |
+          node -e '
+            const [a,b,c] = process.argv[1].split(".").map(Number);
+            const ok = a > 11 || (a === 11 && (b > 5 || (b === 5 && c >= 1)));
+            if (!ok) { console.log("npm " + process.argv[1] + " is below 11.5.1"); process.exit(1); }
+          ' "$(npm --version)" || npm install -g npm@11.5.1
+          npm --version
+
+      - name: Publish to npmjs.com
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VERSION is already on npmjs.com — skipping"
+            exit 0
+          fi
+          if ! npm publish --access public --registry=https://registry.npmjs.org; then
+            echo "::error::npm publish failed. If this is the package's first version, publish it once by hand and configure the trusted publisher on npmjs.com — see docs/releasing.md."
+            exit 1
+          fi
+
+  github-packages:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@sahilbnsll'
+
+      - name: Publish to GitHub Packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VERSION is already on GitHub Packages — skipping"
+            exit 0
+          fi
+          npm publish --registry=https://npm.pkg.github.com

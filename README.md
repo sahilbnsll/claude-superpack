@@ -10,12 +10,11 @@ change**.
 Always-on context: **~742 tokens**, down from ~2,753 in v4 — Claude Code's own estimate,
 from `claude plugin details`.
 
-```
-/plugin marketplace add sahilbnsll/claude-superpack
-/plugin install claude-superpack@claude-superpack
+```bash
+npm install -g @sahilbnsll/claude-superpack
 ```
 
-Other install methods, including from a clone with no registry auth: [Install](#install).
+No login needed. As a plugin or from a clone instead: [Install](#install).
 
 ---
 
@@ -119,6 +118,7 @@ build output into a **288-byte** digest that preserved the evidence line.
 | [Compatibility](docs/compatibility.md) | Conflict analysis against first-party tools and other packs |
 | [Migrating from v4](docs/migration-v4-to-v5.md) | Where each of the 33 old skills went |
 | [Benchmarks](benchmarks/README.md) | What each tier proves and does not prove |
+| [Releasing](docs/releasing.md) | Trusted publishing to npmjs.com, the one-time bootstrap, and troubleshooting |
 | [Changelog](CHANGELOG.md) | Version history |
 
 ---
@@ -128,7 +128,32 @@ build output into a **288-byte** digest that preserved the evidence line.
 **Pick one method.** Installing as a plugin *and* as personal skills loads every description
 twice — `claude-superpack doctor` detects it.
 
-### As a plugin — recommended
+### From npm — recommended
+
+No login needed. Works in bash, zsh, and Windows PowerShell — run one line at a time:
+
+```bash
+npm install -g @sahilbnsll/claude-superpack
+claude-superpack doctor
+```
+
+Installs nine directories into `~/.claude/skills/` and puts the `claude-superpack` CLI on
+your PATH:
+
+```bash
+claude-superpack           # status and always-on context cost
+claude-superpack doctor    # duplicate installs, stale v4 skills
+claude-superpack bench     # the benchmark suite
+```
+
+Published from GitHub Actions with [npm provenance](https://docs.npmjs.com/generating-provenance-statements),
+so each version is verifiably built from this repository:
+`npm view @sahilbnsll/claude-superpack dist.attestations`.
+
+If the install fails with `E401`, an earlier GitHub Packages login is redirecting the scope.
+`npm config delete @sahilbnsll:registry` clears it.
+
+### As a plugin
 
 Inside Claude Code:
 
@@ -137,12 +162,10 @@ Inside Claude Code:
 /plugin install claude-superpack@claude-superpack
 ```
 
-Updates through the plugin manager, namespaced as `/claude-superpack:superpack`, no Node
-setup required for the skills themselves.
+Updates through the plugin manager and is namespaced as `/claude-superpack:superpack`. You
+do not get the `claude-superpack` CLI this way.
 
-### From a clone — no registry auth
-
-Works in bash, zsh, and Windows PowerShell alike:
+### From a clone
 
 ```bash
 git clone https://github.com/sahilbnsll/claude-superpack
@@ -151,31 +174,16 @@ node scripts/install.js
 node scripts/cli.js doctor
 ```
 
-Installs nine directories into `~/.claude/skills/`. To remove: `node scripts/uninstall.js`.
+To remove: `node scripts/uninstall.js`.
 
-### From npm (GitHub Packages)
+### From GitHub Packages
 
-The package is published to GitHub Packages, which requires authentication **even to install
-a public package**. One-time setup, using a GitHub personal access token with the
-`read:packages` scope as the password:
+Also published there, but GitHub Packages requires authentication even for public packages,
+so npmjs.com is simpler. If you need it, log in once with a GitHub personal access token
+holding the `read:packages` scope as the password, then install as above:
 
 ```bash
 npm login --scope=@sahilbnsll --auth-type=legacy --registry=https://npm.pkg.github.com
-```
-
-Then:
-
-```bash
-npm install -g @sahilbnsll/claude-superpack
-claude-superpack doctor
-```
-
-The npm install also puts the `claude-superpack` CLI on your PATH:
-
-```bash
-claude-superpack           # status and always-on context cost
-claude-superpack doctor    # duplicate installs, stale v4 skills
-claude-superpack bench     # the benchmark suite
 ```
 
 ### Upgrading from v4

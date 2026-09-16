@@ -8,6 +8,35 @@ deciding whether to upgrade — breaking changes first, with the migration step.
 
 ---
 
+## [5.0.1] — 2026-09-16
+
+### Added
+
+- **Published to npmjs.com**, so `npm install -g @sahilbnsll/claude-superpack` works with no
+  login. Previously the only registry was GitHub Packages, which rejects unauthenticated
+  installs even for public packages.
+- **Trusted publishing with provenance.** The npmjs.com release authenticates through GitHub
+  Actions OIDC — no npm token exists to leak or expire — and every version carries a signed
+  attestation tying it to the workflow run that built it. See [docs/releasing.md](docs/releasing.md).
+- **`prepublishOnly` runs the benchmarks**, so a manual publish cannot ship a failing pack
+  either.
+
+### Changed
+
+- **The publish workflow is now three jobs** — `verify`, `npmjs`, `github-packages`. The two
+  publish jobs are independent, and each skips a version that already exists, so re-running
+  a release is always safe.
+- Workflow runs on Node 24, meeting trusted publishing's Node ≥ 22.14 and npm ≥ 11.5.1
+  requirements.
+
+### Removed
+
+- **The repository `.npmrc` and `publishConfig.registry`.** Both forced every publish and
+  every in-repo install to GitHub Packages; the in-repo install is what produced a `401` for
+  anyone running `npm install` inside a clone. Registries are now set explicitly per job.
+
+---
+
 ## [5.0.0] — 2026-09-16
 
 Rebuilt around a different premise: a skill pack's job is to improve decisions, and
@@ -200,6 +229,7 @@ Initial plugin scaffold (`f1e705e`, merged in `4801496`).
 
 ---
 
-[5.0.0]: https://github.com/sahilbnsll/claude-superpack/compare/superpack-v4...HEAD
+[5.0.1]: https://github.com/sahilbnsll/claude-superpack/compare/v5.0.0...v5.0.1
+[5.0.0]: https://github.com/sahilbnsll/claude-superpack/compare/superpack-v4...v5.0.0
 [4.0.0]: https://github.com/sahilbnsll/claude-superpack/compare/superpack-v2...superpack-v4
 [2.0.0]: https://github.com/sahilbnsll/claude-superpack/releases/tag/superpack-v2

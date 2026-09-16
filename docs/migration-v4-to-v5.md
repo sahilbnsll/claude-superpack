@@ -13,8 +13,15 @@ node scripts/install.js
 node scripts/cli.js doctor
 ```
 
-Or via npm, which for GitHub Packages needs a one-time `npm login` first — see
-[Install](../README.md#from-npm-github-packages).
+Or via npm, with no login:
+
+```bash
+npm install -g @sahilbnsll/claude-superpack
+claude-superpack doctor
+```
+
+If that fails with `E401`, an earlier GitHub Packages login is redirecting the scope —
+`npm config delete @sahilbnsll:registry` clears it. See [Install](../README.md#from-npm--recommended).
 
 The installer removes the duplicate install v4 left behind and retires the 33 superseded
 skill directories. It identifies each by its own frontmatter — a 1.x–4.x version and the v4
