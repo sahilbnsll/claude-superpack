@@ -1,203 +1,124 @@
 # Usage
 
-Claude Superpack v4 automatically classifies every request and routes it to the appropriate workflow. You do not need to invoke skills manually -- the auto-router handles this.
+## Nothing to invoke
 
-## Class A -- Direct Response
+The skills trigger on their own conditions. You work normally; the pack changes what
+happens when a task turns out to be risky, ambiguous, or in a domain with sharp edges.
 
-```text
-$ claude
-> Explain how the authentication middleware works.
+To reach the core explicitly:
+
+```
+/superpack
 ```
 
-- Auto-router classifies as **Class A**.
-- Claude answers directly.
-- No decomposition, no workers, no overhead.
+## What a real task looks like
 
-```text
-$ claude
-> What does the useAuth hook return?
+```
+> Add rate limiting to the login endpoint.
+
+Scope S2 / Risk R2 — auth path, new shared middleware, 3 call sites.
+
+[reads backend.md and security.md]
+[runs recon.mjs — express + prisma; gates: npm run lint, npx tsc --noEmit, npm test]
+[finds the existing middleware pattern in src/middleware/cors.ts]
+
+Three things change the shape of this. My recommendation on each:
+1. Per user or per API key? → per API key, matches how billing is keyed
+2. 429 with Retry-After, or queue? → 429; queuing moves the problem into our memory
+3. Exempt internal service calls? → yes, or the nightly batch starts failing at 2am
+
+> go
+
+[implements, matching the existing middleware idiom]
+[runs gates.mjs — lint + typecheck + 34/34 tests pass]
+[runs diffstat.mjs — R2 confirmed: auth path, no migration, config-only rollback]
+
+Done: per-key limiting on /api/login, 429 + Retry-After, internal tokens exempt.
+Verified: lint + typecheck + 34/34 tests pass; the over-limit case and the
+  unauthorised-caller case are both covered by new tests.
+Rollback: RATE_LIMIT_ENABLED=false, no deploy needed.
+Worth knowing: the limiter is in-process, so limits are per-instance until it
+  moves to Redis.
 ```
 
-- Same: direct answer.
-- Superpack stays completely out of the way.
+The three things to notice: the sizing line before any work, the questions carrying
+recommendations so "go" is a complete answer, and a report that states what was verified
+and what is still true but unpleasant.
 
-## Ambiguous Requests -- Clarifier
+## What it does on a trivial task
 
-```text
-$ claude
-> Fix the auth
+```
+> The footer says "Copright 2025". Fix it.
+
+Fixed the typo in components/footer.tsx:18. The year is also stale — want 2026?
 ```
 
-- Auto-router detects ambiguity (which auth file? what's broken?).
-- Clarifier activates and presents options:
-  ```
-  "Fix the auth" could mean several things:
-    a) Fix the validateToken null check (bug on line 42)
-    b) Fix the session expiry logic (tests failing)
-    c) Something else?
-  ```
-- After user responds, proceeds with the appropriate class.
+No classification block, no plan, no review. S0 work getting ceremony is treated as a
+defect, and the benchmark measures it.
 
-## Class B -- Single-Agent Execution
+## When it will stop and ask
 
-```text
-$ claude
-> Fix the null check in the login handler.
+Only for R3 — actions you cannot quietly undo:
+
+```
+> Apply the terraform changes.
+
+terraform plan wants to replace aws_db_instance.primary. That destroys the current
+instance and its data and creates a new empty one. Plan: 1 to add, 0 to change,
+1 to destroy. Confirm before I run apply?
 ```
 
-- Auto-router classifies as **Class B**.
-- Task-decomposer creates a simple plan (1 workstream).
-- Execution is sequential -- no parallel workers.
-- Changes are scoped and reviewed.
+An earlier "go ahead" does not authorise this. The blast radius has to be said out loud
+and agreed for the specific action.
 
-```text
-$ claude
-> Add a loading spinner to the dashboard page.
+## Invoking a skill directly
+
+Each skill is user-invocable if you want it out of sequence:
+
+```
+/grilling-requirements     interrogate a plan before building
+/codebase-recon            what is this repo, where does X live
+/planning-changes          write the plan and the rollback
+/debugging-systematically  stop guessing, find the cause
+/verifying-evidence        prove the current claim
+/reviewing-before-done     last pass before reporting complete
+/securing-changes          threat model and pre-commit scan
+/shipping-safely           gate in front of something irreversible
 ```
 
-- Single concern, single module.
-- Handled directly with efficient context gathering (Glob -> Grep -> Read).
+## Running the scripts yourself
 
-## Class C -- Multi-Agent Orchestration
-
-```text
-$ claude
-> Fix the auth validation bug, add regression tests, and update the README.
-```
-
-- Auto-router classifies as **Class C** (three distinct deliverables).
-- Task-decomposer produces a 3-workstream DAG:
-  - `fix-auth-validation` (implementation, sonnet)
-  - `add-regression-tests` (tests, haiku, depends on fix)
-  - `update-readme` (docs, haiku, parallel-ready)
-- Conflict-detector finds: readme is independent, tests depend on fix.
-- Execution plan: group 1 = [fix, readme] in parallel; group 2 = [tests] after fix.
-- Workers spawn in isolated worktrees.
-- Security-scanner checks merged output.
-- Merge-coordinator collects, validates, and summarizes.
-
-```text
-$ claude
-> Refactor the API layer to use the new service pattern, update all consumers, and add integration tests.
-```
-
-- Class C: multiple concerns with separable write surfaces.
-- Full pipeline: decompose -> detect conflicts -> orchestrate -> security scan -> merge.
-
-## Class D -- Serial Complex Execution
-
-```text
-$ claude
-> Migrate the authentication system from session-based to JWT across all services.
-```
-
-- Auto-router classifies as **Class D** (cross-cutting, high coupling).
-- Migration-planner analyzes breaking changes and creates phased plan.
-- Task-decomposer creates ordered workstreams (each depends on the previous).
-- Conflict-detector recommends full serialization.
-- Execution: one workstream at a time, validation between each.
-- Merge-coordinator provides running summary.
-
-## Direct Runner Usage
-
-The `safe-summon` runner can be invoked directly for shell commands:
+They are ordinary Node programs and work outside Claude entirely.
 
 ```bash
-bash ./bin/safe-summon \
-  --task "run-tests" \
-  --timeout 180 \
-  --mode auto \
-  -- npm test
+node ~/.claude/skills/superpack/scripts/recon.mjs
+node ~/.claude/skills/superpack/scripts/gates.mjs --only lint,typecheck
+node ~/.claude/skills/superpack/scripts/diffstat.mjs --base main
+node ~/.claude/skills/superpack/scripts/secrets.mjs --staged
 ```
 
-Supported modes:
-- `auto`: git worktree when clean, filesystem copy otherwise
-- `git`: require a clean committed git repository
-- `copy`: always use filtered filesystem copy
+`secrets.mjs` and `gates.mjs` exit non-zero on failure, so they work as a pre-commit hook
+or a CI step. See [scripts.md](scripts.md).
 
-## Security Scanning
+## CLI
 
-Security-scanner runs automatically:
-- Before commits (staged files)
-- After merge-coordinator integrates changes
-- On demand when the user asks
-
-Catches: hardcoded secrets, SQL/command injection, XSS, CORS misconfiguration, and other OWASP top 10 patterns.
-
-## Test Workflows
-
-Test-mapper and test-generator work together:
-- **test-mapper**: identifies which tests cover changed files, runs only those
-- **test-generator**: creates test stubs for untested functions, matching project patterns
-
-```text
-$ claude
-> Add tests for the auth module
-
-Test Mapper: 4 test files cover auth (vs 47 total)
-Test Generator: 3 functions need tests — generating stubs...
+```bash
+claude-superpack             # status and per-turn context cost
+claude-superpack skills      # what's installed, and the reference library
+claude-superpack doctor      # duplicate installs, stale v4 skills, total skill count
+claude-superpack bench       # the non-billed benchmark suite
 ```
 
-## Documentation Generation
+`doctor` is worth running once after upgrading, and again if sessions start feeling heavy —
+it reports how many skill directories in total are competing for per-turn context, across
+every pack you have installed.
 
-```text
-$ claude
-> Document the API routes
+## Turning parts off
 
-Doc Generator: 12 endpoints found
-  - 8 already documented (current)
-  - 3 need updates (signatures changed)
-  - 1 undocumented (new endpoint)
-```
+The pack is nine independent directories. Delete any you do not want from
+`~/.claude/skills/` — nothing else breaks. `superpack` is the one that makes the rest
+cohere; the others degrade gracefully on their own.
 
-## Session Wrap-Up
-
-```text
-$ claude
-> Wrap up
-
-Session Recap — 2026-04-12
-  Accomplished: Fixed auth bug, added 3 tests, updated README
-  Commits: 3
-  Files changed: 7
-  Pending: Dashboard refactor (deferred to next session)
-```
-
-## Expected Artifacts
-
-### From Agent-tool workers:
-- Structured JSON output (task_id, status, summary, files_modified)
-- Changes in isolated worktree branches
-
-### From safe-summon workers:
-- Patch file under `.safe-summon/`
-- Entry in `claude-execution-log.json`
-
-### From merge-coordinator:
-- Compact merge summary with files changed, decisions made, and validation results
-
-### From security-scanner:
-- Severity-ranked report (critical/high/medium/low)
-
-### From session-recap:
-- Structured summary with accomplishments, decisions, and pending work
-
-## Token Efficiency in Practice
-
-Superpack v4 aggressively minimizes token usage:
-
-- **Before reading**: Glob -> Grep -> Read(offset, limit). Never read full files over 100 lines.
-- **Worker prompts**: under 2000 tokens. Only task, paths, and minimal context.
-- **Model selection**: haiku for mechanical work, sonnet for implementation, opus only for architecture.
-- **Compaction**: `/compact` after each phase to keep context lean.
-- **Output**: structured JSON and diffs, never full file dumps.
-- **Test scoping**: run only relevant tests, not the full suite.
-
-## Operational Notes
-
-- Install `timeout` or `gtimeout` before using `safe-summon`.
-- Prefer `auto` mode unless there is a specific reason to force `git` or `copy`.
-- Review the merge-coordinator summary before integrating results.
-- Worker count is capped at 4 agents / 6 shell workers for stability.
-- The auto-router defaults to the simplest workflow that can handle the request.
-- Security scanner findings at critical/high severity block commit by default.
+To silence a skill without deleting it, add `user-invocable: false` to keep it available
+to Claude but out of your `/` menu, or `disable-model-invocation: true` to make it manual
+only.

@@ -14,12 +14,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://npm.pkg.github.com'
           scope: '@sahilbnsll'
+
+      # Never publish a pack that fails its own benchmarks.
+      - name: Verify before publishing
+        run: node benchmarks/run.mjs
+
+      - name: Check the tag matches package.json
+        if: github.event_name == 'release'
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          TAG="${TAG#superpack-v}"
+          PKG=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "Release tag ($GITHUB_REF_NAME) does not match package.json version ($PKG)"
+            exit 1
+          fi
 
       - run: npm publish
         env:

@@ -1,262 +1,174 @@
 #!/usr/bin/env node
 
 /**
- * Claude Superpack CLI
- * 
- * CLI for managing the skill pack installation, memory system, and graph.
- * 
- * Usage:
- *   claude-superpack install              — Install/reinstall skills
- *   claude-superpack uninstall            — Remove skills
- *   claude-superpack status               — Check installation status
- *   claude-superpack memory status        — Show memory stats
- *   claude-superpack memory consolidate   — Run memory consolidation
- *   claude-superpack skills list          — List all installed skills
- *   claude-superpack version              — Show version
+ * claude-superpack CLI
+ *
+ *   claude-superpack               status
+ *   claude-superpack install       (re)install the skills
+ *   claude-superpack uninstall     remove them
+ *   claude-superpack skills        list what is installed, with per-turn cost
+ *   claude-superpack doctor        check for duplicate installs and stale v4 skills
+ *   claude-superpack bench         run the non-billed benchmark suite
  */
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { spawnSync } = require('child_process');
 
 const pkg = require('../package.json');
+const PACKAGE_ROOT = path.resolve(__dirname, '..');
+const CLAUDE_DIR = path.join(os.homedir(), '.claude');
+const SKILLS_DIR = path.join(CLAUDE_DIR, 'skills');
+const LEGACY_DIR = path.join(SKILLS_DIR, 'claude-superpack');
+const MANIFEST = path.join(CLAUDE_DIR, '.claude-superpack-installed.json');
 
-const TARGET_DIR = path.join(os.homedir(), '.claude', 'skills', 'claude-superpack');
-const SKILLS_DIR = path.join(TARGET_DIR, 'skills');
-const MEMORY_DIR = path.join(os.homedir(), '.claude', 'memory');
-const GRAPHS_DIR = path.join(os.homedir(), '.claude', 'graphs');
+const SHIPPED = fs.existsSync(path.join(PACKAGE_ROOT, 'skills'))
+  ? fs.readdirSync(path.join(PACKAGE_ROOT, 'skills'))
+    .filter((d) => fs.statSync(path.join(PACKAGE_ROOT, 'skills', d)).isDirectory())
+  : [];
 
-const command = process.argv[2] || 'status';
-const subcommand = process.argv[3] || '';
+const RETIRED_V4 = [
+  'auto-router', 'changelog-writer', 'clarifier', 'codebase-onboarder', 'conflict-detector',
+  'context-budget', 'dead-code-finder', 'dep-analyzer', 'doc-generator', 'error-catalog',
+  'graph-builder', 'graph-navigator', 'graph-reviewer', 'graph-updater', 'memory-consolidator',
+  'memory-manager', 'memory-search', 'merge-coordinator', 'migration-planner',
+  'parallel-orchestrator', 'pattern-tracker', 'post-review', 'pre-flight', 'project-memory',
+  'rollback', 'security-scanner', 'session-recap', 'skill-reuse-detector', 'smart-discovery',
+  'task-decomposer', 'test-generator', 'test-mapper', 'user-profiler',
+];
 
-function getSkills() {
-  if (!fs.existsSync(SKILLS_DIR)) return [];
-  return fs.readdirSync(SKILLS_DIR).filter(d =>
-    fs.statSync(path.join(SKILLS_DIR, d)).isDirectory()
-  );
+function frontmatter(file) {
+  if (!fs.existsSync(file)) return {};
+  const m = fs.readFileSync(file, 'utf8').match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!m) return {};
+  const out = {};
+  let key = null;
+  for (const line of m[1].split(/\r?\n/)) {
+    const kv = line.match(/^([a-zA-Z_-]+):\s*(.*)$/);
+    if (kv) { [, key] = kv; out[key] = kv[2]; } else if (key && /^\s+\S/.test(line)) out[key] += ` ${line.trim()}`;
+  }
+  return out;
 }
 
-function getSkillDescription(skillName) {
-  const skillPath = path.join(SKILLS_DIR, skillName, 'SKILL.md');
-  if (!fs.existsSync(skillPath)) return '';
-  const content = fs.readFileSync(skillPath, 'utf-8');
-  const match = content.match(/^description:\s*(.+)$/m);
-  return match ? match[1].substring(0, 80) : '';
-}
+const installedSkills = () => SHIPPED.filter((s) => fs.existsSync(path.join(SKILLS_DIR, s, 'SKILL.md')));
 
-function formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)}KB`;
-  return `${(bytes / 1048576).toFixed(1)}MB`;
-}
-
-function memoryStatus() {
-  console.log(`\n🧠 Memory System\n`);
-
-  if (!fs.existsSync(MEMORY_DIR)) {
-    console.log('   Status: ❌ Not initialized');
-    console.log(`   Run: claude-superpack install\n`);
+function status() {
+  const installed = installedSkills();
+  console.log(`\nclaude-superpack v${pkg.version}\n`);
+  if (!installed.length) {
+    console.log('  not installed');
+    console.log('  run: claude-superpack install\n');
     return;
   }
-
-  console.log(`   Status: ✅ Active`);
-  console.log(`   Location: ${MEMORY_DIR}`);
-
-  // Recent memory
-  const recentPath = path.join(MEMORY_DIR, 'recent.md');
-  if (fs.existsSync(recentPath)) {
-    const stat = fs.statSync(recentPath);
-    const content = fs.readFileSync(recentPath, 'utf-8');
-    const entryCount = (content.match(/^### /gm) || []).length;
-    console.log(`   Recent: ${entryCount} entries (${formatBytes(stat.size)})`);
-  }
-
-  // Long-term memory
-  const ltPath = path.join(MEMORY_DIR, 'long-term.md');
-  if (fs.existsSync(ltPath)) {
-    const stat = fs.statSync(ltPath);
-    const content = fs.readFileSync(ltPath, 'utf-8');
-    const entryCount = (content.match(/^- /gm) || []).length;
-    console.log(`   Long-term: ${entryCount} entries (${formatBytes(stat.size)})`);
-  }
-
-  // Projects
-  const projectsDir = path.join(MEMORY_DIR, 'projects');
-  if (fs.existsSync(projectsDir)) {
-    const projects = fs.readdirSync(projectsDir).filter(f => f.endsWith('.md'));
-    console.log(`   Projects: ${projects.length}`);
-    for (const p of projects) {
-      console.log(`     • ${p.replace('.md', '')}`);
-    }
-  }
-
-  // Index
-  const indexPath = path.join(MEMORY_DIR, 'index.json');
-  if (fs.existsSync(indexPath)) {
-    const index = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
-    if (index.last_consolidation) {
-      console.log(`   Last consolidation: ${index.last_consolidation}`);
-    } else {
-      console.log(`   Last consolidation: never`);
-    }
-  }
-
-  console.log();
+  const chars = installed.reduce((n, s) => {
+    const fm = frontmatter(path.join(SKILLS_DIR, s, 'SKILL.md'));
+    return n + (fm.name || s).length + (fm.description || '').length + 8;
+  }, 0);
+  console.log(`  installed   ${installed.length}/${SHIPPED.length} skills at ${SKILLS_DIR}`);
+  console.log(`  per-turn    ~${Math.round(chars / 3.8)} tokens of always-on metadata`);
+  const stale = RETIRED_V4.filter((s) => fs.existsSync(path.join(SKILLS_DIR, s)));
+  if (stale.length) console.log(`  warning     ${stale.length} superseded v4 skills still present — run: claude-superpack doctor`);
+  if (fs.existsSync(LEGACY_DIR)) console.log('  warning     duplicate install detected — run: claude-superpack doctor');
+  console.log('\n  start with: /superpack\n');
 }
 
-function memoryConsolidate() {
-  const scriptPath = path.join(__dirname, 'consolidate-memory.js');
-  if (!fs.existsSync(scriptPath)) {
-    console.error('❌ consolidate-memory.js not found');
+function skills() {
+  const installed = installedSkills();
+  if (!installed.length) { console.log('\n  not installed\n'); return; }
+  console.log(`\n  ${installed.length} skills\n`);
+  const order = ['phase', 'content'];
+  const rows = installed.map((s) => {
+    const fm = frontmatter(path.join(SKILLS_DIR, s, 'SKILL.md'));
+    const body = fs.readFileSync(path.join(SKILLS_DIR, s, 'SKILL.md'), 'utf8');
+    const activation = (body.match(/^\s*activation:\s*(\w+)/m) || [])[1] || 'phase';
+    return { name: s, activation, desc: (fm.description || '').slice(0, 96) };
+  }).sort((a, b) => order.indexOf(a.activation) - order.indexOf(b.activation) || a.name.localeCompare(b.name));
+  for (const r of rows) {
+    console.log(`  ${r.name.padEnd(26)} ${r.activation.padEnd(8)} ${r.desc}…`);
+  }
+  const refs = path.join(SKILLS_DIR, 'superpack', 'references');
+  if (fs.existsSync(refs)) {
+    const list = fs.readdirSync(refs).filter((f) => f.endsWith('.md'));
+    console.log(`\n  ${list.length} domain references (loaded only when a task needs them):`);
+    console.log(`  ${list.map((f) => f.replace('.md', '')).join(', ')}\n`);
+  }
+}
+
+function doctor() {
+  console.log('\nclaude-superpack doctor\n');
+  let problems = 0;
+
+  const missing = SHIPPED.filter((s) => !fs.existsSync(path.join(SKILLS_DIR, s, 'SKILL.md')));
+  if (missing.length) {
+    problems++;
+    console.log(`  [!] ${missing.length} skills not installed: ${missing.join(', ')}`);
+    console.log('      fix: claude-superpack install');
+  }
+
+  if (fs.existsSync(LEGACY_DIR)) {
+    problems++;
+    console.log('  [!] duplicate install at ~/.claude/skills/claude-superpack/');
+    console.log('      Claude Code discovers both copies, so every description is loaded twice per turn.');
+    console.log('      fix: claude-superpack install   (removes it)');
+  }
+
+  const stale = RETIRED_V4.filter((s) => fs.existsSync(path.join(SKILLS_DIR, s)));
+  if (stale.length) {
+    problems++;
+    console.log(`  [!] ${stale.length} superseded v4 skills still installed`);
+    console.log(`      ${stale.join(', ')}`);
+    console.log('      They still cost per-turn context. fix: claude-superpack install');
+  }
+
+  const other = fs.existsSync(SKILLS_DIR)
+    ? fs.readdirSync(SKILLS_DIR).filter((d) => {
+      try { return fs.statSync(path.join(SKILLS_DIR, d)).isDirectory(); } catch { return false; }
+    }).length
+    : 0;
+  console.log(`\n  ${other} skill directories total in ${SKILLS_DIR}`);
+  if (other > 40) {
+    console.log('      Every one of them contributes to per-turn context. Consider removing unused packs.');
+  }
+  if (!fs.existsSync(MANIFEST)) console.log('  [i] no install manifest — uninstall will fall back to this version\'s skill names');
+
+  console.log(problems ? `\n  ${problems} problem(s) found\n` : '\n  no problems found\n');
+  process.exitCode = problems ? 1 : 0;
+}
+
+function bench() {
+  const runner = path.join(PACKAGE_ROOT, 'benchmarks', 'run.mjs');
+  if (!fs.existsSync(runner)) {
+    console.error('benchmarks/ is not included in this install — run from a clone of the repository');
     process.exit(1);
   }
-  require(scriptPath);
+  const res = spawnSync(process.execPath, [runner, ...process.argv.slice(3)], { stdio: 'inherit', cwd: PACKAGE_ROOT });
+  process.exit(res.status ?? 1);
 }
 
-function skillsList() {
-  const skills = getSkills();
-  console.log(`\n📦 Installed Skills (${skills.length})\n`);
-
-  // Group skills by category
-  const categories = {
-    'Orchestration': ['auto-router', 'clarifier', 'task-decomposer', 'conflict-detector', 'parallel-orchestrator', 'merge-coordinator'],
-    'Memory': ['memory-manager', 'project-memory', 'memory-search', 'memory-consolidator'],
-    'Knowledge Graph': ['graph-builder', 'graph-reviewer', 'graph-navigator', 'graph-updater', 'codebase-onboarder'],
-    'Security': ['security-scanner'],
-    'Token Efficiency': ['context-budget', 'smart-discovery', 'skill-reuse-detector'],
-    'Quality & Testing': ['test-mapper', 'test-generator', 'dep-analyzer'],
-    'Workflow': ['pre-flight', 'post-review', 'rollback'],
-    'Documentation': ['doc-generator', 'changelog-writer'],
-    'Migration & Maintenance': ['migration-planner', 'dead-code-finder'],
-    'Communication': ['session-recap'],
-    'Learning': ['pattern-tracker', 'user-profiler', 'error-catalog'],
-  };
-
-  const categorized = new Set();
-
-  for (const [category, members] of Object.entries(categories)) {
-    const installed = members.filter(m => skills.includes(m));
-    if (installed.length === 0) continue;
-
-    console.log(`   ${category}:`);
-    for (const skill of installed) {
-      console.log(`     ✅ ${skill}`);
-      categorized.add(skill);
-    }
-  }
-
-  // Show uncategorized skills
-  const uncategorized = skills.filter(s => !categorized.has(s));
-  if (uncategorized.length > 0) {
-    console.log(`   Other:`);
-    for (const skill of uncategorized) {
-      console.log(`     ✅ ${skill}`);
-    }
-  }
-
-  console.log();
-}
-
-function graphStatus() {
-  console.log(`\n🗺️  Knowledge Graph\n`);
-
-  if (!fs.existsSync(GRAPHS_DIR)) {
-    console.log('   Status: No graphs built yet');
-    console.log(`   Graphs are built automatically when you work on a project.\n`);
-    return;
-  }
-
-  const projects = fs.readdirSync(GRAPHS_DIR).filter(d =>
-    fs.statSync(path.join(GRAPHS_DIR, d)).isDirectory()
-  );
-
-  console.log(`   Location: ${GRAPHS_DIR}`);
-  console.log(`   Projects: ${projects.length}`);
-
-  for (const project of projects) {
-    const graphPath = path.join(GRAPHS_DIR, project, 'graph.json');
-    if (fs.existsSync(graphPath)) {
-      const stat = fs.statSync(graphPath);
-      console.log(`     • ${project} (${formatBytes(stat.size)}, updated: ${stat.mtime.toISOString().split('T')[0]})`);
-    } else {
-      console.log(`     • ${project} (empty)`);
-    }
-  }
-
-  console.log();
-}
-
+const command = process.argv[2] || 'status';
 switch (command) {
-  case 'install':
-  case 'reinstall':
-    require('./install');
-    break;
-
-  case 'uninstall':
-  case 'remove':
-    require('./uninstall');
-    break;
-
-  case 'status': {
-    console.log(`\n🔌 Claude Superpack v${pkg.version}\n`);
-
-    if (!fs.existsSync(TARGET_DIR)) {
-      console.log('   Status: ❌ Not installed');
-      console.log(`   Run: claude-superpack install\n`);
-      break;
-    }
-
-    const skills = getSkills();
-    console.log(`   Status: ✅ Installed`);
-    console.log(`   Location: ${TARGET_DIR}`);
-    console.log(`   Skills: ${skills.length}`);
-    console.log(`   Memory: ${fs.existsSync(MEMORY_DIR) ? '✅ Active' : '❌ Not initialized'}`);
-    console.log(`   Graphs: ${fs.existsSync(GRAPHS_DIR) ? fs.readdirSync(GRAPHS_DIR).length + ' projects' : 'None built'}`);
-    console.log();
-    break;
-  }
-
-  case 'memory':
-    if (subcommand === 'consolidate') {
-      memoryConsolidate();
-    } else {
-      memoryStatus();
-    }
-    break;
-
-  case 'graph':
-    graphStatus();
-    break;
-
-  case 'skills':
-    skillsList();
-    break;
-
-  case 'version':
-  case '-v':
-  case '--version':
-    console.log(pkg.version);
-    break;
-
-  case 'help':
-  case '-h':
-  case '--help':
+  case 'install': case 'reinstall': require('./install'); break;
+  case 'uninstall': case 'remove': require('./uninstall'); break;
+  case 'status': status(); break;
+  case 'skills': case 'list': skills(); break;
+  case 'doctor': doctor(); break;
+  case 'bench': case 'benchmark': bench(); break;
+  case 'version': case '-v': case '--version': console.log(pkg.version); break;
+  case 'help': case '-h': case '--help':
     console.log(`
-🔌 Claude Superpack v${pkg.version}
+claude-superpack v${pkg.version}
 
-Usage:
-  claude-superpack install              Install/reinstall skills
-  claude-superpack uninstall            Remove skills
-  claude-superpack status               Overall status
-  claude-superpack skills               List all installed skills
-  claude-superpack memory               Memory system status
-  claude-superpack memory consolidate   Run memory consolidation
-  claude-superpack graph                Knowledge graph status
-  claude-superpack version              Show version
+  claude-superpack              status and per-turn context cost
+  claude-superpack install      (re)install the skills
+  claude-superpack uninstall    remove them
+  claude-superpack skills       list skills and domain references
+  claude-superpack doctor       find duplicate installs and stale v4 skills
+  claude-superpack bench        run the non-billed benchmark suite
+  claude-superpack version
 `);
     break;
-
   default:
-    console.error(`Unknown command: ${command}\nRun: claude-superpack help`);
+    console.error(`unknown command: ${command}\nrun: claude-superpack help`);
     process.exit(1);
 }

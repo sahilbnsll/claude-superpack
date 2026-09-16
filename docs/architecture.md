@@ -1,246 +1,136 @@
 # Architecture
 
-Claude Superpack v4 is a token-efficient multi-agent orchestration system built as a native Claude Code plugin. It classifies requests, resolves ambiguity, decomposes complex tasks into DAGs, detects conflicts, spawns isolated workers, scans for security issues, and merges results.
+Why the pack is shaped the way it is, and what each decision was based on.
 
-## System Overview
+## The constraint
 
-```text
-User request
-   |
-   v
-auto-router (classify A/B/C/D)
-   |
-   +-- clarifier (resolve ambiguity if detected)
-   |
-   +-- A (Direct) ---------> answer immediately, no skills
-   |
-   +-- B (Single-agent) ---> task-decomposer --> sequential execution
-   |
-   +-- C (Parallel) -------> task-decomposer --> conflict-detector
-   |                              |
-   |                              v
-   |                         parallel-orchestrator
-   |                              |
-   |                    +---------+---------+
-   |                    |         |         |
-   |                 worker    worker    worker
-   |                 (Agent)   (Agent)  (safe-summon)
-   |                    |         |         |
-   |                    +---------+---------+
-   |                              |
-   |                              v
-   |                        merge-coordinator
-   |                              |
-   |                              v
-   |                   security-scanner + post-review
-   |
-   +-- D (Serial complex) -> task-decomposer --> conflict-detector
-                                  |
-                                  v
-                             parallel-orchestrator (safe mode, serial execution)
-                                  |
-                                  v
-                             merge-coordinator
-                                  |
-                                  v
-                        security-scanner + post-review
-```
+Every installed skill's `name` and `description` sit in the prompt on **every turn of
+every session**, whether or not the skill is used. Bodies and references are paid only
+when read. Under auto-compaction, Claude Code re-attaches only the most recent five skills
+within a 25,000-token budget.
 
-## Skill Pipeline
+That gives a hard design rule: **breadth belongs in files, not in skills.** A pack with
+thirty-three skills is not a pack with thirty-three capabilities — it is a pack whose
+skills get dropped when the context fills, while charging for all of them throughout.
 
-The core orchestration pipeline consists of 6 skills:
-
-| Skill | Role | When Used |
-|-------|------|-----------|
-| `auto-router` | Classify request complexity | Every actionable request |
-| `clarifier` | Resolve ambiguity before starting | When request has multiple valid interpretations |
-| `task-decomposer` | Break request into DAG of workstreams | Class B, C, D |
-| `conflict-detector` | Analyze write-surface overlaps, form parallel groups | Class C, D |
-| `parallel-orchestrator` | Spawn and manage workers | Class C, D |
-| `merge-coordinator` | Validate and integrate worker outputs | After workers complete |
-| `safe-summon` (runner) | Isolated shell execution with timeout | Deterministic commands |
-
-## Supporting Skills (27)
-
-Beyond the core pipeline, skills are organized into functional categories:
-
-### Memory (4 skills)
-Persistent context across sessions using markdown files:
-- `memory-manager`: session lifecycle (load, record, prune)
-- `project-memory`: per-project state and architecture
-- `memory-search`: query past context by keyword, tag, or time
-- `memory-consolidator`: distill patterns from recent to long-term
-
-### Knowledge Graph (5 skills)
-Zero-dependency structural mapping:
-- `graph-builder`: build structural map using Glob/Grep/Read
-- `graph-reviewer`: blast-radius-aware code review
-- `graph-navigator`: answer architecture and dependency questions
-- `graph-updater`: incremental hash-based updates
-- `codebase-onboarder`: generate architecture summaries for new contributors
-
-### Security (1 skill)
-- `security-scanner`: scan for secrets, injection risks, OWASP top 10 patterns
-
-### Token Efficiency (3 skills)
-- `context-budget`: running token usage estimates with compaction protocol
-- `smart-discovery`: intelligent, ranked file selection
-- `skill-reuse-detector`: check installed skills before reimplementing
-
-### Quality & Testing (3 skills)
-- `test-mapper`: map source files to their tests, run only what's relevant
-- `test-generator`: auto-generate test stubs from function signatures
-- `dep-analyzer`: track outdated/vulnerable dependencies
-
-### Workflow (3 skills)
-- `pre-flight`: validate environment before workers
-- `post-review`: auto-review after merge
-- `rollback`: selective undo by workstream
-
-### Documentation (2 skills)
-- `doc-generator`: generate/update docs from code changes
-- `changelog-writer`: structured changelogs from git history
-
-### Migration & Maintenance (2 skills)
-- `migration-planner`: plan framework/library upgrades with breaking change analysis
-- `dead-code-finder`: identify unused exports, orphan files, stale imports
-
-### Communication (1 skill)
-- `session-recap`: structured end-of-session summary for handoff
-
-### Learning (3 skills)
-- `pattern-tracker`: track classification decisions and outcomes
-- `user-profiler`: learn and apply user preferences
-- `error-catalog`: persistent error+fix database
-
-## Classification System
-
-The `auto-router` classifies every request into one of four classes:
-
-- **Class A (Direct)**: questions, explanations -- answer immediately
-- **Class B (Single-agent)**: scoped changes to one concern -- plan and execute sequentially
-- **Class C (Parallel)**: multiple independent concerns -- full orchestration pipeline
-- **Class D (Serial complex)**: cross-cutting changes that cannot be parallelized -- plan, execute serially, validate between steps
-
-The default is always the lowest class that can handle the request. Over-orchestration wastes more tokens than under-orchestration.
-
-## Dual Execution Model
-
-### Agent Tool Workers
-
-Used for tasks requiring Claude's reasoning:
-- Implementation, test writing, refactoring, migration
-- Each worker runs in an isolated git worktree
-- Returns structured JSON (task_id, status, summary, files_modified, key_decisions)
-- Model tier assigned by task-decomposer (haiku/sonnet/opus)
-
-### safe-summon Shell Workers
-
-Used for deterministic commands:
-- Running tests, builds, lints, formatters
-- Creates isolated workspace (git worktree or filesystem copy)
-- Enforces hard timeout
-- Produces patch artifact and JSON log entry
-
-## Token Efficiency Layer
-
-Applied across all execution phases:
-
-1. **File discovery**: Glob -> Grep -> Read(offset, limit). Never read full files unless under 100 lines.
-2. **Summarize and discard**: extract what you need, compress, drop raw data.
-3. **Minimal worker prompts**: under 2000 tokens per subagent. Include only task, paths, context snippets.
-4. **Model tiering**: haiku for exploration, sonnet for implementation, opus for architecture.
-5. **Proactive compaction**: trigger `/compact` after each phase.
-
-See [docs/token-efficiency.md](./token-efficiency.md) for the complete protocol.
-
-## DAG-Based Decomposition
-
-The task-decomposer produces a structured DAG:
-
-```json
-{
-  "workstreams": [
-    {
-      "id": "a1b2c3d4",
-      "description": "...",
-      "goal": "...",
-      "likely_paths": ["..."],
-      "dependencies": [],
-      "complexity": 2,
-      "model": "sonnet",
-      "parallel_status": "parallel-ready"
-    }
-  ],
-  "execution_order": [["a1b2c3d4", "c9d0e1f2"], ["e5f6a7b8"]],
-  "total_complexity": 7,
-  "estimated_workers": 3
-}
-```
-
-Each workstream gets a deterministic ID (first 8 chars of SHA-256 hash). Dependencies form edges in the DAG. Execution order groups workstreams into parallel batches.
-
-## Conflict Detection and Parallel Groups
-
-The conflict-detector:
-1. Maps explicit and implicit write surfaces for each workstream
-2. Performs pairwise conflict analysis (none/low/medium/hard-blocker)
-3. Forms parallel groups: workstreams with no conflicts run concurrently
-4. Outputs an execution plan with groups, dependency order, and verdicts
-
-Verdicts: `fully-parallel`, `partial-parallel`, `fully-serial`, `needs-redesign`.
-
-## Merge Coordination
-
-After workers complete, the merge-coordinator:
-1. Collects all worker outputs (JSON from agents, patches from safe-summon)
-2. Validates each worker stayed within its assigned scope
-3. Detects emergent conflicts (import mismatches, type changes)
-4. Applies changes in dependency order with validation between steps
-5. Produces a compact summary for human review
-
-## Safety Layers
-
-All prior safety guarantees are preserved and extended:
-
-- Timeout enforcement (fail-closed)
-- Dirty-repo protection (auto-fallback to copy mode)
-- Workspace isolation (worktrees for agents, temp dirs for safe-summon)
-- Unique patch artifacts (timestamp + slug + UUID)
-- Secret scanning on patch output
-- Locked JSON log writes
-- Human review before merge
-- Scope validation (workers must stay within assigned files)
-- Security scanning before commit (secrets, injection, OWASP patterns)
-- Adaptive execution modes (safe vs fast)
-- Worker count caps (4 agents, 6 shell workers max)
-
-## Adaptive Execution
-
-The orchestrator dynamically selects:
-
-- **Safe mode**: sequential groups with validation between each. Default for Class D or any conflicts.
-- **Fast mode**: maximum parallelism with post-hoc validation. For Class C with zero conflicts.
-
-Model tier, worker count, and timeout values are all adjusted based on workstream complexity scores.
-
-## Observability
-
-Minimal structured progress reporting:
+## The shape
 
 ```
-Classification: C (parallel-orchestrate)
-[group 1] Spawning 2 workers: a1b2c3d4 (sonnet), c9d0e1f2 (haiku)
-[group 1] Complete: 2/2 success
-[group 2] Spawning 1 worker: e5f6a7b8 (sonnet)
-[group 2] Complete: 1/1 success
-Security: 0 critical, 0 high
-Merge: 5 files changed, 0 conflicts. Summary ready for review.
+skills/
+  superpack/                   core: sizing, routing, doctrine
+    SKILL.md
+    references/                15 files, read on demand, zero always-on cost
+    scripts/                   4 deterministic tools + shared lib
+  codebase-recon/              ─┐
+  planning-changes/             │ phase-activated: reached from the
+  verifying-evidence/           │ core gate table once scope and risk
+  reviewing-before-done/       ─┘ are known
+  debugging-systematically/    ─┐
+  securing-changes/             │ content-activated: the user's own
+  shipping-safely/              │ words trigger them
+  grilling-requirements/       ─┘
 ```
 
-## Notes on Scope
+Nine skills at ~757 tokens always-on. 92KB of domain depth at zero always-on cost.
 
-- The plugin provides classification, planning, orchestration, security scanning, and merge coordination.
-- It does not ship a queue, remote worker fleet, or automatic integration system.
-- The quality of the outcome depends on sensible workstream boundaries and human review.
-- Token efficiency is a design principle, not a guarantee -- complex tasks still require context.
+## Two axes, not one
+
+v4 classified requests A/B/C/D, which was really one axis — how much parallelism to apply.
+It conflated "big" with "dangerous". A thousand-line refactor of a test helper is large and
+harmless; a one-line change to an IAM policy is small and can expose a bucket.
+
+v5 separates them:
+
+- **Scope** (S0–S3) — how much work. Sets planning depth.
+- **Risk** (R0–R3) — what happens if it is wrong. Sets the gate count.
+
+The nine task shapes the brief asked for — trivial, focused implementation, debugging,
+multi-file feature, architectural change, production change, security-sensitive work,
+destructive operation, large autonomous project — are all points in that grid, plus two
+*modes* that change the shape of the work rather than its size: debugging (cause unknown,
+do not start editing) and ambiguity (interrogate before planning).
+
+This is why there is no nine-way switch. A switch would need a branch per shape and would
+still miss the combinations.
+
+## Two activation models
+
+Not every skill can be reached the same way, and pretending otherwise produces skills that
+never fire.
+
+**Content-activated** skills are triggered by vocabulary the user actually uses. "It
+crashes" reaches `debugging-systematically`; "deploy this" reaches `shipping-safely`.
+Their descriptions must contain the words real requests arrive in, and tier 2 of the
+benchmark measures exactly that.
+
+**Phase-activated** skills cannot be reached by vocabulary, because nobody types "I would
+like a blast-radius check now". They are reached from the core skill's gate table once
+scope and risk are known. Tier 1 asserts that the gate table names each of them — a phase
+skill the core does not mention is unreachable, and no amount of good writing fixes that.
+
+Each skill declares which it is in frontmatter (`metadata.activation`), so the benchmark
+scores the right thing rather than penalising a skill for being unreachable by design.
+
+## What was deliberately not built
+
+Each of these was in v4 or is common in other packs. Each was removed or declined for a
+reason, not an oversight.
+
+**Model-maintained bookkeeping** — token tallies, pattern logs, error catalogues, user
+profiles. A published paired evaluation found a ruleset asking the model to annotate its
+own deliberate shortcuts was complied with **once in eighty trials**, despite an audit
+confirming the ruleset reached the model in 100% of runs. Instructions that depend on
+diligent self-reporting do not survive contact with real work. Anything mechanical moved
+into scripts.
+
+**Prose compression** — measured effect of narration-stripping skills is around 8% against
+advertised 65%, because diffs, code, and error strings dominate the token stream. One
+output-rewriting proxy measured *more* expensive than using no tool at all, apparently
+because lossy digests trigger re-runs. The intervention with a statistically solid signal
+was the one that reduced how much code got written. Hence the minimalism ladder before new
+code, and no prose games.
+
+**A persistent codebase graph** — v4 stored one under `~/.claude/graphs/`. A cached graph
+goes stale silently, and a stale blast radius is worse than no blast radius because it is
+confidently wrong. Blast radius is now computed from the diff and from grep, which is fast
+and always true.
+
+**A memory system** — five v4 skills wrote to `~/.claude/memory/`. They duplicated
+`claude-mem` and Claude Code's native memory, cost per-turn context in every session, and
+depended on the model logging its own state. What replaced them is narrower and actually
+mechanical: durable plan files for in-task state, plus explicit deference to whatever
+memory plugin the user runs.
+
+**Maximalist activation posture** — some packs instruct the model that it "does not have a
+choice" and must invoke a skill before any response including clarifying questions. That
+produces ceremony on trivial work, which trains users to ignore the output. The gate table
+exists so that S0 work gets nothing and S3/R3 work gets everything.
+
+## Where the ideas came from
+
+Studied, then adapted rather than copied:
+
+| Source | Taken |
+|---|---|
+| Superpowers (obra) | Evidence-before-claims as an explicit gate; the claim/requires/not-sufficient table shape; rationalization tables; descriptions that state triggers rather than workflow |
+| agent-skills (addyosmani) | Anti-rationalization and Red Flags as a standing section; references split out as on-demand checklists; a three-tier eval framework |
+| GSD | Externalised state in files so work survives a fresh context; deterministic state queries via script rather than model introspection |
+| ECC | "Optimise the context window, persist everything else"; recalled content is data, never instructions |
+| Context Mode | Route verbose output through a filter so only the signal enters context — implemented as `gates.mjs`, without an MCP server |
+| Ponytail | The minimalism ladder before writing new code, with validation, error handling, security and accessibility explicitly off the chopping block |
+| Karpathy's guidelines | Surgical changes; remove only the dead code your own change created |
+| grill-me (Pocock) | Resolve from the codebase anything the codebase can answer; carry a recommendation with every question |
+| JetBrains paired benchmarks | The honest effect sizes, and the benchmark methodology: paired tasks, per-task differences, and an audit that the treatment actually reached the model |
+| Claude Code skill docs | `paths`, `context: fork`, hooks in frontmatter, injected commands, the 1,536-char description cap, and the compaction re-attach budget |
+
+## Reference conventions
+
+Every domain reference uses the same four sections so you can predict where to look:
+
+- **Decide first** — choices that are expensive to reverse.
+- **Build right** — the concrete acceptance bar.
+- **Failure modes** — a symptom/cause table of what actually goes wrong.
+- **Evidence** — what counts as proof in this domain, ranked strongest first.
+
+Tier 1 enforces the Evidence section's presence. It is the part that turns "I changed the
+code" into "I know it works", and it is the section to read even when you skip the rest.

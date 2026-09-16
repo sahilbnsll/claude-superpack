@@ -1,7 +1,7 @@
 {
   "name": "@sahilbnsll/claude-superpack",
-  "version": "4.0.0",
-  "description": "33-skill agentic system for Claude Code: multi-agent orchestration, persistent memory, codebase knowledge graph, security scanning, token optimization, workflow automation, and self-improving learning — all zero-dependency.",
+  "version": "5.0.0",
+  "description": "An engineering operating system for Claude Code: risk-tiered workflows, 15 on-demand domain references, deterministic recon/verification/risk scripts, and an evidence gate before any completion claim. Nine skills, ~750 tokens of always-on context.",
   "author": "Sahil Bansal <https://github.com/sahilbnsll>",
   "license": "MIT",
   "repository": {
@@ -12,32 +12,36 @@
   "keywords": [
     "claude-code",
     "claude-skill",
+    "agent-skills",
     "plugin",
-    "multi-agent",
-    "orchestration",
-    "parallel-execution",
-    "token-optimization",
-    "persistent-memory",
-    "knowledge-graph",
-    "codebase-analysis",
-    "blast-radius",
-    "error-catalog",
-    "pattern-learning"
+    "verification",
+    "evidence",
+    "risk-tiering",
+    "code-review",
+    "security",
+    "devops",
+    "observability",
+    "token-efficiency",
+    "context-engineering"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
   "files": [
     "skills/",
-    "bin/",
+    "benchmarks/",
     "docs/",
-    "examples/",
     ".claude-plugin/",
     "LICENSE",
     "README.md",
     "scripts/"
   ],
   "scripts": {
+    "bench": "node benchmarks/run.mjs",
+    "test": "node benchmarks/run.mjs",
     "postinstall": "node scripts/install.js",
     "preuninstall": "node scripts/uninstall.js"
   },

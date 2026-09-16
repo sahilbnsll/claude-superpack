@@ -1,0 +1,396 @@
+{
+  "generated": "2026-09-16T06:20:36.165Z",
+  "node": "v24.19.0",
+  "platform": "win32",
+  "tier1": {
+    "tier": 1,
+    "name": "structure",
+    "checks": 148,
+    "passed": 148,
+    "failed": 0,
+    "always_on_chars": 2878,
+    "always_on_tokens_estimate": 757,
+    "skills": 9,
+    "references": 15,
+    "scripts": 5,
+    "failures": []
+  },
+  "tier2": {
+    "tier": 2,
+    "name": "routing vocabulary",
+    "tasks": 18,
+    "reference_routing": {
+      "scored": 17,
+      "hits": 17,
+      "accuracy": 1
+    },
+    "skill_routing": {
+      "scored": 7,
+      "hits": 7,
+      "accuracy": 1
+    },
+    "average_references_selected": 1.28,
+    "no_domain_tasks_kept_clean": "1/1",
+    "reference_false_positives": 2,
+    "misses": [],
+    "rows": [
+      {
+        "id": "frontend-empty-state",
+        "scope": "S1",
+        "risk": "R0",
+        "expected_references": [
+          "frontend"
+        ],
+        "selected_references": [
+          "frontend"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [],
+        "selected_skills": [
+          "grilling-requirements",
+          "securing-changes"
+        ],
+        "skill_result": "n/a"
+      },
+      {
+        "id": "backend-idempotency",
+        "scope": "S2",
+        "risk": "R2",
+        "expected_references": [
+          "backend",
+          "security",
+          "frontend"
+        ],
+        "selected_references": [
+          "backend",
+          "frontend"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [],
+        "selected_skills": [
+          "debugging-systematically"
+        ],
+        "skill_result": "n/a"
+      },
+      {
+        "id": "db-migration",
+        "scope": "S2",
+        "risk": "R3",
+        "expected_references": [
+          "backend",
+          "architecture",
+          "data"
+        ],
+        "selected_references": [
+          "backend",
+          "data",
+          "architecture"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [
+          "shipping-safely"
+        ],
+        "selected_skills": [
+          "shipping-safely"
+        ],
+        "skill_result": "hit"
+      },
+      {
+        "id": "terraform-sg",
+        "scope": "S1",
+        "risk": "R2",
+        "expected_references": [
+          "devops",
+          "cloud",
+          "security"
+        ],
+        "selected_references": [
+          "cloud"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [
+          "securing-changes",
+          "shipping-safely"
+        ],
+        "selected_skills": [
+          "securing-changes",
+          "shipping-safely"
+        ],
+        "skill_result": "hit"
+      },
+      {
+        "id": "debug-intermittent",
+        "scope": "S1",
+        "risk": "R1",
+        "expected_references": [
+          "testing"
+        ],
+        "selected_references": [
+          "testing"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [
+          "debugging-systematically"
+        ],
+        "selected_skills": [
+          "debugging-systematically"
+        ],
+        "skill_result": "hit"
+      },
+      {
+        "id": "secret-committed",
+        "scope": "S0",
+        "risk": "R3",
+        "expected_references": [
+          "security"
+        ],
+        "selected_references": [
+          "security"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [
+          "securing-changes",
+          "shipping-safely"
+        ],
+        "selected_skills": [
+          "securing-changes"
+        ],
+        "skill_result": "hit"
+      },
+      {
+        "id": "perf-slow-page",
+        "scope": "S2",
+        "risk": "R0",
+        "expected_references": [
+          "performance",
+          "frontend"
+        ],
+        "selected_references": [
+          "performance"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [],
+        "selected_skills": [],
+        "skill_result": "n/a"
+      },
+      {
+        "id": "api-pagination",
+        "scope": "S2",
+        "risk": "R1",
+        "expected_references": [
+          "backend"
+        ],
+        "selected_references": [
+          "backend",
+          "docs"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [],
+        "selected_skills": [
+          "debugging-systematically"
+        ],
+        "skill_result": "n/a"
+      },
+      {
+        "id": "llm-rag-quality",
+        "scope": "S2",
+        "risk": "R1",
+        "expected_references": [
+          "ai-llm"
+        ],
+        "selected_references": [
+          "ai-llm"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [],
+        "selected_skills": [],
+        "skill_result": "n/a"
+      },
+      {
+        "id": "k8s-oomkill",
+        "scope": "S1",
+        "risk": "R2",
+        "expected_references": [
+          "devops",
+          "sre",
+          "performance"
+        ],
+        "selected_references": [
+          "devops"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [
+          "debugging-systematically"
+        ],
+        "selected_skills": [
+          "debugging-systematically",
+          "shipping-safely"
+        ],
+        "skill_result": "hit"
+      },
+      {
+        "id": "data-pipeline-dupes",
+        "scope": "S2",
+        "risk": "R2",
+        "expected_references": [
+          "data"
+        ],
+        "selected_references": [
+          "data"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [
+          "debugging-systematically"
+        ],
+        "selected_skills": [
+          "debugging-systematically"
+        ],
+        "skill_result": "hit"
+      },
+      {
+        "id": "trivial-typo",
+        "scope": "S0",
+        "risk": "R0",
+        "expected_references": [],
+        "selected_references": [],
+        "reference_result": "n/a-correct",
+        "expected_skills": [],
+        "selected_skills": [
+          "debugging-systematically"
+        ],
+        "skill_result": "n/a"
+      },
+      {
+        "id": "a11y-audit",
+        "scope": "S2",
+        "risk": "R0",
+        "expected_references": [
+          "frontend"
+        ],
+        "selected_references": [
+          "frontend"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [],
+        "selected_skills": [
+          "debugging-systematically",
+          "grilling-requirements"
+        ],
+        "skill_result": "n/a"
+      },
+      {
+        "id": "refactor-shared-module",
+        "scope": "S2",
+        "risk": "R1",
+        "expected_references": [
+          "architecture",
+          "quality"
+        ],
+        "selected_references": [
+          "security",
+          "quality",
+          "architecture"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [],
+        "selected_skills": [],
+        "skill_result": "n/a"
+      },
+      {
+        "id": "incident-5xx",
+        "scope": "S1",
+        "risk": "R2",
+        "expected_references": [
+          "sre",
+          "devops"
+        ],
+        "selected_references": [
+          "sre"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [
+          "shipping-safely",
+          "debugging-systematically"
+        ],
+        "selected_skills": [
+          "grilling-requirements",
+          "shipping-safely"
+        ],
+        "skill_result": "hit"
+      },
+      {
+        "id": "ci-pipeline",
+        "scope": "S2",
+        "risk": "R2",
+        "expected_references": [
+          "devops",
+          "testing",
+          "security"
+        ],
+        "selected_references": [
+          "devops"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [],
+        "selected_skills": [
+          "grilling-requirements",
+          "shipping-safely"
+        ],
+        "skill_result": "n/a"
+      },
+      {
+        "id": "docs-readme",
+        "scope": "S1",
+        "risk": "R0",
+        "expected_references": [
+          "docs"
+        ],
+        "selected_references": [
+          "docs"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [],
+        "selected_skills": [],
+        "skill_result": "n/a"
+      },
+      {
+        "id": "parallel-feature",
+        "scope": "S3",
+        "risk": "R1",
+        "expected_references": [
+          "parallel",
+          "architecture"
+        ],
+        "selected_references": [
+          "parallel"
+        ],
+        "reference_result": "hit",
+        "expected_skills": [],
+        "selected_skills": [
+          "grilling-requirements"
+        ],
+        "skill_result": "n/a"
+      }
+    ],
+    "caveat": "Vocabulary coverage only. A miss guarantees a routing failure in practice; a hit does not guarantee success."
+  },
+  "footprint": {
+    "current": {
+      "skills": 9,
+      "always_on_chars": 2878,
+      "always_on_tokens": 757,
+      "skill_bodies_chars": 47311,
+      "skill_bodies_tokens_if_all_loaded": 12450,
+      "references": 15,
+      "reference_chars": 91690,
+      "typical_task_load_tokens": 5615
+    },
+    "heaviest_always_on": [
+      "superpack: 479 chars",
+      "shipping-safely: 350 chars",
+      "securing-changes: 328 chars"
+    ]
+  },
+  "tier3": "Not run — requires billed live runs. Protocol: benchmarks/tier3-behavior.md, harness: benchmarks/tier3-run.mjs",
+  "verdict": "pass"
+}

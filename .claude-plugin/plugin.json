@@ -1,7 +1,7 @@
 {
   "name": "claude-superpack",
-  "version": "4.0.0",
-  "description": "33-skill agentic system for Claude Code: orchestration, persistent memory, codebase knowledge graph, security scanning, token optimization, workflow automation, and self-improving learning.",
+  "version": "5.0.0",
+  "description": "An engineering operating system for Claude Code: risk-tiered workflows, on-demand domain references, deterministic scripts, and an evidence gate before any completion claim.",
   "author": {
     "name": "Sahil Bansal",
     "url": "https://github.com/sahilbnsll"
@@ -12,52 +12,41 @@
   "keywords": [
     "claude-code",
     "plugin",
-    "parallel-execution",
-    "agents",
-    "orchestration",
-    "persistent-memory",
-    "knowledge-graph",
-    "codebase-analysis",
-    "blast-radius",
-    "token-optimization",
-    "error-catalog",
-    "pattern-learning",
-    "multi-agent",
-    "workflow-automation"
+    "agent-skills",
+    "verification",
+    "evidence",
+    "risk-tiering",
+    "security",
+    "devops",
+    "observability",
+    "accessibility",
+    "context-engineering",
+    "token-efficiency"
   ],
   "interface": {
     "displayName": "Claude Superpack",
-    "shortDescription": "33-skill agentic system: orchestration + memory + knowledge graph + security + testing + learning.",
-    "longDescription": "Claude Superpack v4 transforms Claude Code into a self-improving agentic system with 33 skills across 11 categories. ORCHESTRATION: auto-classify requests (A/B/C/D), decompose into DAGs, detect conflicts, spawn isolated workers, merge results. MEMORY: persistent context across sessions — recent (48h rolling), long-term (distilled patterns), and per-project state. KNOWLEDGE GRAPH: zero-dependency structural mapping of any codebase using only Glob/Grep/Read, with blast-radius-aware code review that reads 80-90% fewer files. TOKEN EFFICIENCY: budget tracking, smart file discovery, skill reuse detection. SECURITY: secret detection, injection scanning, OWASP risk checks. QUALITY & TESTING: test mapping, test generation, dependency analysis. WORKFLOW: pre-flight checks, post-execution review, git-aware rollback. DOCUMENTATION: auto-generated docs, changelogs. COMMUNICATION: clarifying questions, session recaps. ONBOARDING: codebase architecture summaries, migration planning. LEARNING: pattern tracking, user preference profiling, dead code detection, and a persistent error+fix catalog.",
+    "shortDescription": "Size the work, load only the knowledge it needs, prove the result with evidence.",
+    "longDescription": "Nine skills and fifteen domain references that add engineering judgement to Claude Code without adding context bloat. The core skill sizes every task on two axes — scope (how much work) and risk (what happens if it is wrong) — and runs the lightest workflow that is safe for that combination: no ceremony on a typo, a rollback plan and explicit confirmation before a schema migration. Domain depth for frontend, backend, data, AI/LLM, cloud, DevOps, SRE, security, performance, testing, architecture, quality and documentation lives in references that are read only when a task actually touches them, so breadth costs nothing until it is used. Four bundled zero-dependency scripts replace guesswork with deterministic output: stack and convention detection, verification gates distilled to pass/fail plus the real errors, git-diff risk and blast-radius analysis, and a high-precision secret scan. A verification skill gates every completion claim behind evidence produced after the change. The pack defers to first-party tools where they exist — code review, security review, simplify, frontend design — rather than duplicating them. Always-on cost is about 750 tokens per turn; a three-tier benchmark suite in the repository measures structure, routing and behaviour.",
     "developerName": "Sahil Bansal",
     "category": "Productivity",
     "capabilities": [
       "Skills",
-      "Automation",
-      "Parallel planning",
-      "Multi-agent orchestration",
-      "Token optimization",
-      "Persistent memory",
-      "Codebase knowledge graph",
-      "Blast radius analysis",
-      "Security scanning",
-      "Test mapping and generation",
-      "Dependency analysis",
-      "Documentation generation",
-      "Migration planning",
-      "Dead code detection",
-      "Codebase onboarding",
-      "Pattern learning",
-      "Error cataloging"
+      "Risk-tiered workflows",
+      "Evidence-gated completion",
+      "Codebase and convention detection",
+      "Blast-radius analysis",
+      "Secret scanning",
+      "Domain references",
+      "Benchmark suite"
     ],
     "websiteURL": "https://github.com/sahilbnsll/claude-superpack",
     "defaultPrompt": [
-      "Fix a bug, add tests, and update docs safely.",
-      "Refactor the auth module across all consumers.",
-      "What depends on the database module?",
-      "Remember what we decided about the auth architecture.",
-      "Show me the blast radius for this change.",
-      "What errors have we seen before in this project?"
+      "Fix the double-charge bug on checkout and prove it can't happen again.",
+      "This endpoint is slow — find out why before changing anything.",
+      "Split the users.full_name column safely. 400k rows.",
+      "Our integration tests fail one run in five. Find the cause.",
+      "Review what I just changed before I open the PR.",
+      "Open the staging database to the worker subnet in Terraform."
     ],
     "brandColor": "#0F766E"
   }

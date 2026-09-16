@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  bench:
+    name: benchmarks (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: ['18', '20', '22']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # footprint.mjs compares against historical refs
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # No dependencies to install — the pack is deliberately zero-dependency, and the
+      # benchmark asserts it stays that way.
+      - name: Structure, routing, and footprint
+        run: node benchmarks/run.mjs
+
+      - name: Scripts run on this repository
+        run: |
+          node skills/superpack/scripts/recon.mjs --compact
+          node skills/superpack/scripts/diffstat.mjs --compact
+          node skills/superpack/scripts/secrets.mjs --compact
+          node skills/superpack/scripts/gates.mjs --list
+
+      - name: Scripts support --help
+        run: |
+          node skills/superpack/scripts/recon.mjs --help
+          node skills/superpack/scripts/gates.mjs --help
+          node skills/superpack/scripts/diffstat.mjs --help
+          node skills/superpack/scripts/secrets.mjs --help
+
+      - name: Install and uninstall cleanly
+        run: |
+          node scripts/install.js
+          node scripts/cli.js status
+          node scripts/cli.js skills
+          node scripts/uninstall.js
+
+      - name: Upload benchmark results
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '20'
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmarks/results/latest.json

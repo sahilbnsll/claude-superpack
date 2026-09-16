@@ -24,3 +24,7 @@ claude-execution-log.json.lock
 
 # Node (in case any tooling is added later)
 node_modules/
+
+# Benchmark artifacts kept out of the tree
+benchmarks/results/tier3*.json
+*.tgz
